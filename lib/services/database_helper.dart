@@ -18,11 +18,21 @@ class DatabaseHelper {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
 
+    // 既存のデータベースを削除
+    await deleteDatabase(path);
+
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createDB,
+      onUpgrade: _upgradeDB,
     );
+  }
+
+  Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('ALTER TABLE tasks ADD COLUMN taskColor INTEGER NOT NULL DEFAULT 4283215696');
+    }
   }
 
   Future<void> _createDB(Database db, int version) async {
@@ -33,6 +43,7 @@ class DatabaseHelper {
         deadline TEXT,
         priority INTEGER NOT NULL,
         category TEXT NOT NULL,
+        taskColor INTEGER NOT NULL DEFAULT 4283215696,
         isCompleted INTEGER NOT NULL
       )
     ''');

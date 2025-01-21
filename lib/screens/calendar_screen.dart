@@ -2,9 +2,17 @@ import 'package:flutter/cupertino.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../models/task.dart';
 import '../services/database_helper.dart';
+import '../screens/settings_screen.dart';
 
 class CalendarScreen extends StatefulWidget {
-  const CalendarScreen({super.key});
+  final bool isDarkMode;
+  final Function(bool) onDarkModeChanged;
+
+  const CalendarScreen({
+    super.key,
+    required this.isDarkMode,
+    required this.onDarkModeChanged,
+  });
 
   @override
   State<CalendarScreen> createState() => _CalendarScreenState();
@@ -60,8 +68,28 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final lastDay = DateTime(now.year, now.month + 6, 1);
 
     return CupertinoPageScaffold(
-      navigationBar: const CupertinoNavigationBar(
-        middle: Text('カレンダー'),
+      backgroundColor: widget.isDarkMode 
+          ? CupertinoColors.black 
+          : CupertinoColors.systemBackground,
+      navigationBar: CupertinoNavigationBar(
+        backgroundColor: widget.isDarkMode 
+            ? CupertinoColors.black 
+            : CupertinoColors.systemBackground,
+        middle: const Text('カレンダー'),
+        leading: CupertinoButton(
+          padding: EdgeInsets.zero,
+          child: const Icon(CupertinoIcons.settings),
+          onPressed: () {
+            Navigator.push(
+              context,
+              CupertinoPageRoute(
+                builder: (context) => SettingsScreen(
+                  onDarkModeChanged: widget.onDarkModeChanged,
+                ),
+              ),
+            );
+          },
+        ),
       ),
       child: SafeArea(
         child: Column(

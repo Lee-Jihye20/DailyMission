@@ -1,19 +1,10 @@
 import 'package:flutter/cupertino.dart';
 
 enum Priority {
-  low,
-  medium,
-  high;
+  medium;
 
   Color get color {
-    switch (this) {
-      case Priority.low:
-        return const Color(0xFF4CAF50); // 緑
-      case Priority.medium:
-        return const Color(0xFFFFC107); // 黄
-      case Priority.high:
-        return const Color(0xFFF44336); // 赤
-    }
+    return const Color(0xFFFFC107); // 黄
   }
 }
 
@@ -23,6 +14,7 @@ class Task {
   final DateTime? deadline;
   final Priority priority;
   final String category;
+  final Color taskColor;
   bool isCompleted;
 
   Task({
@@ -31,8 +23,9 @@ class Task {
     this.deadline,
     this.priority = Priority.medium,
     this.category = '未分類',
+    Color? taskColor,
     this.isCompleted = false,
-  });
+  }) : taskColor = taskColor ?? const Color(0xFFFFFFFF);
 
   Map<String, dynamic> toMap() {
     return {
@@ -41,6 +34,7 @@ class Task {
       'deadline': deadline?.toIso8601String(),
       'priority': priority.index,
       'category': category,
+      'taskColor': taskColor.value,
       'isCompleted': isCompleted ? 1 : 0,
     };
   }
@@ -52,6 +46,7 @@ class Task {
       deadline: map['deadline'] != null ? DateTime.parse(map['deadline']) : null,
       priority: Priority.values[map['priority']],
       category: map['category'],
+      taskColor: Color(map['taskColor']),
       isCompleted: map['isCompleted'] == 1,
     );
   }

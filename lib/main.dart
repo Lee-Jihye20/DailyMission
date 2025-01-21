@@ -156,14 +156,14 @@ class _TaskListScreenState extends State<TaskListScreen> {
   final _scrollController = ScrollController();
   DateTime? _selectedTime;
   Color? _selectedColor;
-  bool _isEditMode = false;
+  bool _isEditMode = false;  // 編集モードの状態を追加
   final _taskColors = [
-    const Color(0xFF4CAF50),
-    const Color(0xFF2196F3),
-    const Color(0xFFFFC107),
-    const Color(0xFFE91E63),
-    const Color(0xFF9C27B0),
-    const Color(0xFFFF5722),
+    const Color(0xFF4CAF50),  // 緑
+    const Color(0xFF2196F3),  // 青
+    const Color(0xFFFFC107),  // 黄
+    const Color(0xFFE91E63),  // ピンク
+    const Color(0xFF9C27B0),  // 紫
+    const Color(0xFFFF5722),  // オレンジ
   ];
 
   @override

@@ -628,7 +628,9 @@ class _TaskListScreenState extends State<TaskListScreen> {
         height: MediaQuery.of(context).size.height * 0.7,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: CupertinoColors.systemBackground,
+          color: widget.isDarkMode 
+              ? CupertinoColors.black 
+              : CupertinoColors.systemBackground,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           boxShadow: [
             BoxShadow(
@@ -646,22 +648,29 @@ class _TaskListScreenState extends State<TaskListScreen> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: CupertinoColors.systemGrey4,
+                    color: widget.isDarkMode 
+                        ? CupertinoColors.systemGrey 
+                        : CupertinoColors.systemGrey4,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   '新しいタスクを追加',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
+                    color: widget.isDarkMode 
+                        ? CupertinoColors.white 
+                        : CupertinoColors.black,
                   ),
                 ),
                 const SizedBox(height: 24),
                 Container(
                   decoration: BoxDecoration(
-                    color: CupertinoColors.systemGrey6,
+                    color: widget.isDarkMode 
+                        ? CupertinoColors.darkBackgroundGray 
+                        : CupertinoColors.systemGrey6,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: CupertinoTextField(
@@ -669,6 +678,11 @@ class _TaskListScreenState extends State<TaskListScreen> {
                     placeholder: 'タスクを入力してください',
                     padding: const EdgeInsets.all(12),
                     decoration: null,
+                    style: TextStyle(
+                      color: widget.isDarkMode 
+                          ? CupertinoColors.white 
+                          : CupertinoColors.black,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -691,7 +705,9 @@ class _TaskListScreenState extends State<TaskListScreen> {
                             shape: BoxShape.circle,
                             border: isSelected
                                 ? Border.all(
-                                    color: CupertinoColors.black,
+                                    color: widget.isDarkMode 
+                                        ? CupertinoColors.white 
+                                        : CupertinoColors.black,
                                     width: 2,
                                   )
                                 : null,
@@ -708,15 +724,19 @@ class _TaskListScreenState extends State<TaskListScreen> {
                       context: context,
                       builder: (context) => Container(
                         height: 216,
-                        color: CupertinoColors.systemBackground,
+                        color: widget.isDarkMode 
+                            ? CupertinoColors.black 
+                            : CupertinoColors.systemBackground,
                         child: Column(
                           children: [
                             Container(
                               height: 44,
-                              decoration: const BoxDecoration(
+                              decoration: BoxDecoration(
                                 border: Border(
                                   bottom: BorderSide(
-                                    color: CupertinoColors.systemGrey5,
+                                    color: widget.isDarkMode 
+                                        ? CupertinoColors.darkBackgroundGray 
+                                        : CupertinoColors.systemGrey5,
                                     width: 1,
                                   ),
                                 ),
@@ -757,14 +777,18 @@ class _TaskListScreenState extends State<TaskListScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: CupertinoColors.systemGrey6,
+                      color: widget.isDarkMode 
+                          ? CupertinoColors.darkBackgroundGray 
+                          : CupertinoColors.systemGrey6,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
                       children: [
-                        const Icon(
+                        Icon(
                           CupertinoIcons.clock,
-                          color: CupertinoColors.systemGrey,
+                          color: widget.isDarkMode 
+                              ? CupertinoColors.systemGrey2 
+                              : CupertinoColors.systemGrey,
                           size: 20,
                         ),
                         const SizedBox(width: 8),
@@ -774,8 +798,12 @@ class _TaskListScreenState extends State<TaskListScreen> {
                               : '${tempSelectedTime!.hour.toString().padLeft(2, '0')}:${tempSelectedTime!.minute.toString().padLeft(2, '0')}',
                           style: TextStyle(
                             color: tempSelectedTime == null
-                                ? CupertinoColors.systemGrey
-                                : CupertinoColors.label,
+                                ? (widget.isDarkMode 
+                                    ? CupertinoColors.systemGrey2 
+                                    : CupertinoColors.systemGrey)
+                                : (widget.isDarkMode 
+                                    ? CupertinoColors.white 
+                                    : CupertinoColors.label),
                             fontSize: 16,
                           ),
                         ),
@@ -792,14 +820,18 @@ class _TaskListScreenState extends State<TaskListScreen> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           decoration: BoxDecoration(
-                            color: CupertinoColors.systemGrey6,
+                            color: widget.isDarkMode 
+                                ? CupertinoColors.darkBackgroundGray 
+                                : CupertinoColors.systemGrey6,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Center(
+                          child: Center(
                             child: Text(
                               'キャンセル',
                               style: TextStyle(
-                                color: CupertinoColors.systemGrey,
+                                color: widget.isDarkMode 
+                                    ? CupertinoColors.systemGrey2 
+                                    : CupertinoColors.systemGrey,
                               ),
                             ),
                           ),

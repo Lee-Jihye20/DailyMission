@@ -511,11 +511,15 @@ class _TaskListScreenState extends State<TaskListScreen> {
         height: 100,
         decoration: BoxDecoration(
           color: task.isCompleted 
-              ? CupertinoColors.systemGrey6.withOpacity(0.8)
+              ? (widget.isDarkMode
+                  ? CupertinoColors.systemRed.withOpacity(0.1)
+                  : CupertinoColors.systemGrey6.withOpacity(0.8))
               : CupertinoColors.systemBackground,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: CupertinoColors.systemGrey5,
+            color: task.isCompleted && widget.isDarkMode
+                ? CupertinoColors.systemRed.withOpacity(0.2)
+                : CupertinoColors.systemGrey5,
             width: 1,
           ),
           boxShadow: [

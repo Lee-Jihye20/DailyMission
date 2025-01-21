@@ -155,6 +155,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
   final _scrollController = ScrollController();
   DateTime? _selectedTime;
   Color? _selectedColor;
+  bool _isEditMode = false;  // 編集モードの状態を追加
   final _taskColors = [
     const Color(0xFF4CAF50),  // 緑
     const Color(0xFF2196F3),  // 青
@@ -223,46 +224,63 @@ class _TaskListScreenState extends State<TaskListScreen> {
             );
           },
         ),
-        trailing: CupertinoButton(
-          padding: EdgeInsets.zero,
-          child: const Icon(CupertinoIcons.sort_down),
-          onPressed: () {
-            showCupertinoModalPopup(
-              context: context,
-              builder: (context) => CupertinoActionSheet(
-                actions: [
-                  CupertinoActionSheetAction(
-                    onPressed: () {
-                      setState(() {
-                        _tasks.sort((a, b) => 
-                          b.priority.index.compareTo(a.priority.index));
-                      });
-                      Navigator.pop(context);
-                    },
-                    child: const Text('優先度でソート'),
-                  ),
-                  CupertinoActionSheetAction(
-                    onPressed: () {
-                      setState(() {
-                        _tasks.sort((a, b) {
-                          if (a.deadline == null) return 1;
-                          if (b.deadline == null) return -1;
-                          return a.deadline!.compareTo(b.deadline!);
-                        });
-                      });
-                      Navigator.pop(context);
-                    },
-                    child: const Text('期限でソート'),
-                  ),
-                ],
-                cancelButton: CupertinoActionSheetAction(
-                  onPressed: () => Navigator.pop(context),
-                  isDestructiveAction: true,
-                  child: const Text('キャンセル'),
-                ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              child: Text(
+                _isEditMode ? '完了' : '編集',
+                style: const TextStyle(fontSize: 17),
               ),
-            );
-          },
+              onPressed: () {
+                setState(() {
+                  _isEditMode = !_isEditMode;
+                });
+              },
+            ),
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              child: const Icon(CupertinoIcons.sort_down),
+              onPressed: () {
+                showCupertinoModalPopup(
+                  context: context,
+                  builder: (context) => CupertinoActionSheet(
+                    actions: [
+                      CupertinoActionSheetAction(
+                        onPressed: () {
+                          setState(() {
+                            _tasks.sort((a, b) => 
+                              b.priority.index.compareTo(a.priority.index));
+                          });
+                          Navigator.pop(context);
+                        },
+                        child: const Text('優先度でソート'),
+                      ),
+                      CupertinoActionSheetAction(
+                        onPressed: () {
+                          setState(() {
+                            _tasks.sort((a, b) {
+                              if (a.deadline == null) return 1;
+                              if (b.deadline == null) return -1;
+                              return a.deadline!.compareTo(b.deadline!);
+                            });
+                          });
+                          Navigator.pop(context);
+                        },
+                        child: const Text('期限でソート'),
+                      ),
+                    ],
+                    cancelButton: CupertinoActionSheetAction(
+                      onPressed: () => Navigator.pop(context),
+                      isDestructiveAction: true,
+                      child: const Text('キャンセル'),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
         ),
       ),
       child: SafeArea(
@@ -511,13 +529,11 @@ class _TaskListScreenState extends State<TaskListScreen> {
         height: 100,
         decoration: BoxDecoration(
           color: task.isCompleted 
-              ? (widget.isDarkMode
-                  ? CupertinoColors.systemRed.withOpacity(0.1)
-                  : CupertinoColors.systemGrey6.withOpacity(0.8))
+              ? CupertinoColors.systemRed.withOpacity(0.1)
               : CupertinoColors.systemBackground,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: task.isCompleted && widget.isDarkMode
+            color: task.isCompleted
                 ? CupertinoColors.systemRed.withOpacity(0.2)
                 : CupertinoColors.systemGrey5,
             width: 1,
@@ -533,87 +549,108 @@ class _TaskListScreenState extends State<TaskListScreen> {
             ),
           ],
         ),
-        child: CupertinoButton(
-          padding: EdgeInsets.zero,
-          onPressed: () async {
-            task.isCompleted = !task.isCompleted;
-            await DatabaseHelper.instance.update(task);
-            _loadTasks();
-            HapticFeedback.selectionClick();
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 12,
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 4,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: task.isCompleted
-                        ? CupertinoColors.systemGrey3
-                        : task.taskColor,
-                    borderRadius: BorderRadius.circular(2),
+        child: Row(
+          children: [
+            Expanded(
+              child: CupertinoButton(
+                padding: EdgeInsets.zero,
+                onPressed: () async {
+                  if (!_isEditMode) {
+                    task.isCompleted = !task.isCompleted;
+                    await DatabaseHelper.instance.update(task);
+                    _loadTasks();
+                    HapticFeedback.selectionClick();
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
                   ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
                   child: Row(
                     children: [
+                      Container(
+                        width: 4,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: task.isCompleted
+                              ? CupertinoColors.systemGrey3
+                              : task.taskColor,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
+                        child: Row(
                           children: [
-                            Text(
-                              task.title,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w600,
-                                decoration: task.isCompleted
-                                    ? TextDecoration.lineThrough
-                                    : null,
-                                color: task.isCompleted
-                                    ? CupertinoColors.systemGrey
-                                    : CupertinoColors.label,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    task.title,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w600,
+                                      decoration: task.isCompleted
+                                          ? TextDecoration.lineThrough
+                                          : null,
+                                      color: task.isCompleted
+                                          ? CupertinoColors.systemGrey
+                                          : CupertinoColors.label,
+                                    ),
+                                  ),
+                                  if (task.isCompleted) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '完了',
+                                      style: TextStyle(
+                                        color: CupertinoColors.systemRed.withOpacity(0.5),
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
                             ),
-                            if (task.isCompleted) ...[
-                              const SizedBox(height: 4),
-                              const Text(
-                                '完了',
+                            if (task.deadline != null) ...[
+                              const SizedBox(width: 8),
+                              Text(
+                                '${task.deadline!.hour.toString().padLeft(2, '0')}:${task.deadline!.minute.toString().padLeft(2, '0')}',
                                 style: TextStyle(
-                                  color: CupertinoColors.systemRed,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                  color: task.isCompleted
+                                      ? CupertinoColors.systemGrey3
+                                      : task.taskColor,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ],
                           ],
                         ),
                       ),
-                      if (task.deadline != null) ...[
-                        const SizedBox(width: 8),
-                        Text(
-                          '${task.deadline!.hour.toString().padLeft(2, '0')}:${task.deadline!.minute.toString().padLeft(2, '0')}',
-                          style: TextStyle(
-                            fontSize: 15,
-                            color: task.isCompleted
-                                ? CupertinoColors.systemGrey3
-                                : task.taskColor,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
                     ],
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
+            if (_isEditMode) ...[
+              CupertinoButton(
+                padding: const EdgeInsets.only(right: 16),
+                child: Icon(
+                  CupertinoIcons.pencil_circle_fill,
+                  color: widget.isDarkMode 
+                      ? CupertinoColors.systemGrey 
+                      : CupertinoColors.systemGrey2,
+                  size: 28,
+                ),
+                onPressed: () => _showEditTaskDialog(task),
+              ),
+            ],
+          ],
         ),
       ),
     );
@@ -889,6 +926,291 @@ class _TaskListScreenState extends State<TaskListScreen> {
                               await NotificationService().scheduleTaskNotification(
                                 savedTask.id!,
                                 savedTask.title,
+                                deadline,
+                              );
+                            }
+                            
+                            _loadTasks();
+                          }
+                          Navigator.pop(context);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showEditTaskDialog(Task task) async {
+    _textController.text = task.title;
+    DateTime? tempSelectedTime = task.deadline;
+    Color? tempSelectedColor = task.taskColor;
+
+    showCupertinoModalPopup(
+      context: context,
+      builder: (BuildContext dialogContext) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: widget.isDarkMode 
+              ? CupertinoColors.black 
+              : CupertinoColors.systemBackground,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          boxShadow: [
+            BoxShadow(
+              color: CupertinoColors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return Column(
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: widget.isDarkMode 
+                        ? CupertinoColors.systemGrey 
+                        : CupertinoColors.systemGrey4,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'タスクを編集',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: widget.isDarkMode 
+                        ? CupertinoColors.white 
+                        : CupertinoColors.black,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Container(
+                  decoration: BoxDecoration(
+                    color: widget.isDarkMode 
+                        ? CupertinoColors.darkBackgroundGray 
+                        : CupertinoColors.systemGrey6,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: CupertinoTextField(
+                    controller: _textController,
+                    placeholder: 'タスクを入力してください',
+                    padding: const EdgeInsets.all(12),
+                    decoration: null,
+                    style: TextStyle(
+                      color: widget.isDarkMode 
+                          ? CupertinoColors.white 
+                          : CupertinoColors.black,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Container(
+                  height: 50,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: _taskColors.map((color) {
+                      final isSelected = tempSelectedColor == color;
+                      return GestureDetector(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setModalState(() => tempSelectedColor = color);
+                        },
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: color,
+                            shape: BoxShape.circle,
+                            border: isSelected
+                                ? Border.all(
+                                    color: widget.isDarkMode 
+                                        ? CupertinoColors.white 
+                                        : CupertinoColors.black,
+                                    width: 2,
+                                  )
+                                : null,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                GestureDetector(
+                  onTap: () {
+                    showCupertinoModalPopup(
+                      context: context,
+                      builder: (context) => Container(
+                        height: 216,
+                        color: widget.isDarkMode 
+                            ? CupertinoColors.black 
+                            : CupertinoColors.systemBackground,
+                        child: Column(
+                          children: [
+                            Container(
+                              height: 44,
+                              decoration: BoxDecoration(
+                                border: Border(
+                                  bottom: BorderSide(
+                                    color: widget.isDarkMode 
+                                        ? CupertinoColors.darkBackgroundGray 
+                                        : CupertinoColors.systemGrey5,
+                                    width: 1,
+                                  ),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  CupertinoButton(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                                    child: const Text('キャンセル'),
+                                    onPressed: () => Navigator.pop(context),
+                                  ),
+                                  CupertinoButton(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                                    child: const Text('完了'),
+                                    onPressed: () {
+                                      setModalState(() {});
+                                      Navigator.pop(context);
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Expanded(
+                              child: CupertinoDatePicker(
+                                mode: CupertinoDatePickerMode.time,
+                                initialDateTime: tempSelectedTime ?? DateTime.now(),
+                                onDateTimeChanged: (time) {
+                                  setModalState(() => tempSelectedTime = time);
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: widget.isDarkMode 
+                          ? CupertinoColors.darkBackgroundGray 
+                          : CupertinoColors.systemGrey6,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          CupertinoIcons.clock,
+                          color: widget.isDarkMode 
+                              ? CupertinoColors.systemGrey2 
+                              : CupertinoColors.systemGrey,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          tempSelectedTime == null
+                              ? '時刻を設定'
+                              : '${tempSelectedTime!.hour.toString().padLeft(2, '0')}:${tempSelectedTime!.minute.toString().padLeft(2, '0')}',
+                          style: TextStyle(
+                            color: tempSelectedTime == null
+                                ? (widget.isDarkMode 
+                                    ? CupertinoColors.systemGrey2 
+                                    : CupertinoColors.systemGrey)
+                                : (widget.isDarkMode 
+                                    ? CupertinoColors.white 
+                                    : CupertinoColors.label),
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                Row(
+                  children: [
+                    Expanded(
+                      child: CupertinoButton(
+                        padding: EdgeInsets.zero,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            color: widget.isDarkMode 
+                                ? CupertinoColors.darkBackgroundGray 
+                                : CupertinoColors.systemGrey6,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Center(
+                            child: Text(
+                              'キャンセル',
+                              style: TextStyle(
+                                color: widget.isDarkMode 
+                                    ? CupertinoColors.systemGrey2 
+                                    : CupertinoColors.systemGrey,
+                              ),
+                            ),
+                          ),
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: CupertinoButton(
+                        padding: EdgeInsets.zero,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            color: CupertinoColors.activeBlue,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Center(
+                            child: Text(
+                              '保存',
+                              style: TextStyle(
+                                color: CupertinoColors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                        onPressed: () async {
+                          if (_textController.text.isNotEmpty) {
+                            final now = DateTime.now();
+                            final deadline = tempSelectedTime != null
+                                ? DateTime(
+                                    now.year,
+                                    now.month,
+                                    now.day,
+                                    tempSelectedTime!.hour,
+                                    tempSelectedTime!.minute,
+                                  )
+                                : null;
+                            
+                            task.title = _textController.text;
+                            task.deadline = deadline;
+                            task.taskColor = tempSelectedColor ?? task.taskColor;
+                            
+                            await DatabaseHelper.instance.update(task);
+                            
+                            if (deadline != null) {
+                              await NotificationService().scheduleTaskNotification(
+                                task.id!,
+                                task.title,
                                 deadline,
                               );
                             }

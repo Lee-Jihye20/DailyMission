@@ -10,22 +10,22 @@ enum Priority {
 
 class Task {
   final int? id;
-  final String title;
-  final DateTime? deadline;
+  String title;
+  DateTime? deadline;
   final Priority priority;
   final String category;
-  final Color taskColor;
+  Color taskColor;
   bool isCompleted;
 
   Task({
     this.id,
     required this.title,
     this.deadline,
-    this.priority = Priority.medium,
-    this.category = '未分類',
-    Color? taskColor,
+    required this.priority,
+    required this.category,
+    required this.taskColor,
     this.isCompleted = false,
-  }) : taskColor = taskColor ?? const Color(0xFFFFFFFF);
+  });
 
   Map<String, dynamic> toMap() {
     return {

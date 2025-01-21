@@ -210,124 +210,129 @@ class _TaskListScreenState extends State<TaskListScreen> {
                     HapticFeedback.mediumImpact();
                   },
                   builder: (context, candidateData, rejectedData) {
-                    final isTarget = candidateData.isNotEmpty;
                     return AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
+                      duration: const Duration(milliseconds: 300),
                       curve: Curves.easeInOut,
-                      transform: Matrix4.identity()
-                        ..translate(
-                          0.0,
-                          isTarget ? 4.0 : 0.0,
-                        ),
-                      child: AnimatedScale(
-                        duration: const Duration(milliseconds: 200),
-                        scale: isTarget ? 1.02 : 1.0,
-                        child: AnimatedOpacity(
-                          duration: const Duration(milliseconds: 200),
-                          opacity: isTarget ? 0.7 : 1.0,
-                          child: LongPressDraggable<Task>(
-                            data: task,
-                            axis: Axis.vertical,
-                            maxSimultaneousDrags: 1,
-                            feedback: Material(
-                              color: Colors.transparent,
-                              child: Opacity(
-                                opacity: 0.9,
-                                child: Transform.scale(
-                                  scale: 1.05,
-                                  child: SizedBox(
-                                    width: MediaQuery.of(context).size.width,
-                                    child: _buildTaskItem(
-                                      task,
-                                      isDragging: true,
-                                    ),
-                                  ),
+                      child: LongPressDraggable<Task>(
+                        data: task,
+                        axis: Axis.vertical,
+                        maxSimultaneousDrags: 1,
+                        feedback: Material(
+                          color: Colors.transparent,
+                          child: Opacity(
+                            opacity: 0.9,
+                            child: Transform.scale(
+                              scale: 1.05,
+                              child: SizedBox(
+                                width: MediaQuery.of(context).size.width,
+                                child: _buildTaskItem(
+                                  task,
+                                  isDragging: true,
                                 ),
                               ),
                             ),
-                            childWhenDragging: Container(
-                              margin: const EdgeInsets.symmetric(
+                          ),
+                        ),
+                        childWhenDragging: Container(
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          height: 80,
+                          decoration: BoxDecoration(
+                            color: CupertinoColors.white.withOpacity(0.8),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: CupertinoColors.systemGrey4.withOpacity(0.5),
+                              width: 2,
+                              strokeAlign: BorderSide.strokeAlignCenter,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: CupertinoColors.systemGrey.withOpacity(0.1),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
                                 horizontal: 16,
                                 vertical: 8,
                               ),
-                              decoration: BoxDecoration(
-                                color: CupertinoColors.systemGrey6.withOpacity(0.7),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: CupertinoColors.systemGrey4,
-                                  width: 1,
-                                  strokeAlign: BorderSide.strokeAlignCenter,
-                                ),
-                              ),
-                              child: Opacity(
-                                opacity: 0.5,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 16,
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 4,
+                                    height: 32,
+                                    decoration: BoxDecoration(
+                                      color: (task.isCompleted
+                                          ? CupertinoColors.systemGrey3
+                                          : task.priority.color).withOpacity(0.5),
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
                                   ),
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        width: 4,
-                                        height: 32,
-                                        decoration: BoxDecoration(
-                                          color: task.isCompleted
-                                              ? CupertinoColors.systemGrey3
-                                              : task.priority.color,
-                                          borderRadius: BorderRadius.circular(2),
+                                  const SizedBox(width: 16),
+                                  if (task.isCompleted)
+                                    Padding(
+                                      padding: const EdgeInsets.only(right: 12),
+                                      child: Text(
+                                        '完了',
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          color: const Color.fromARGB(255, 255, 0, 0).withOpacity(0.5),
+                                          fontWeight: FontWeight.w500,
                                         ),
                                       ),
-                                      const SizedBox(width: 16),
-                                      if (task.isCompleted)
-                                        const Padding(
-                                          padding: EdgeInsets.only(right: 12),
-                                          child: Text(
-                                            '完了',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: CupertinoColors.systemGrey,
-                                              fontWeight: FontWeight.w500,
-                                            ),
+                                    ),
+                                  Expanded(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          task.title,
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w600,
+                                            decoration: task.isCompleted
+                                                ? TextDecoration.lineThrough
+                                                : null,
+                                            color: (task.isCompleted
+                                                ? CupertinoColors.systemGrey
+                                                : CupertinoColors.label).withOpacity(0.5),
                                           ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              task.title,
-                                              style: TextStyle(
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.w600,
-                                                color: CupertinoColors.systemGrey,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 6),
-                                            Text(
-                                              'カテゴリー: ${task.category}',
-                                              style: const TextStyle(
-                                                fontSize: 14,
-                                                color: CupertinoColors.systemGrey,
-                                              ),
-                                            ),
-                                          ],
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'カテゴリー: ${task.category}',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: (task.isCompleted
+                                                ? CupertinoColors.systemGrey3
+                                                : CupertinoColors.systemGrey).withOpacity(0.5),
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
-                                ),
+                                ],
                               ),
                             ),
-                            onDragStarted: () {
-                              HapticFeedback.heavyImpact();
-                            },
-                            onDragEnd: (details) {
-                              HapticFeedback.mediumImpact();
-                            },
-                            child: _buildTaskItem(task),
                           ),
                         ),
+                        onDragStarted: () {
+                          HapticFeedback.heavyImpact();
+                        },
+                        onDragEnd: (details) {
+                          HapticFeedback.mediumImpact();
+                        },
+                        child: _buildTaskItem(task),
                       ),
                     );
                   },

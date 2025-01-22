@@ -11,6 +11,7 @@ import 'screens/calendar_screen.dart';
 import 'screens/settings_screen.dart';  // 設定画面のインポートを追加
 import 'package:flutter/rendering.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'screens/profile_screen.dart';  // ProfileScreenを追加する必要があります
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -101,6 +102,10 @@ class MainScreen extends StatelessWidget {
             icon: Icon(CupertinoIcons.calendar),
             label: 'カレンダー',
           ),
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.person),
+            label: 'プロフィール',
+          ),
         ],
       ),
       tabBuilder: (context, index) {
@@ -114,6 +119,12 @@ class MainScreen extends StatelessWidget {
             break;
           case 1:
             child = CalendarScreen(
+              isDarkMode: isDarkMode,
+              onDarkModeChanged: onDarkModeChanged,
+            );
+            break;
+          case 2:
+            child = ProfileScreen(  // ProfileScreenを追加する必要があります
               isDarkMode: isDarkMode,
               onDarkModeChanged: onDarkModeChanged,
             );
@@ -558,9 +569,14 @@ class _TaskListScreenState extends State<TaskListScreen> {
                 onPressed: () async {
                   if (!_isEditMode) {
                     task.isCompleted = !task.isCompleted;
+                    if (task.isCompleted) {
+                      task.completedAt = DateTime.now();
+                      HapticFeedback.mediumImpact();
+                    } else {
+                      task.completedAt = null;
+                    }
                     await DatabaseHelper.instance.update(task);
                     _loadTasks();
-                    HapticFeedback.selectionClick();
                   }
                 },
                 child: Container(

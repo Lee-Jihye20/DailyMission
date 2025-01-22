@@ -1,6 +1,6 @@
-import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
-import '../models/task.dart';
+import 'package:path/path.dart';
+import '../models/task.dart';  // Taskモデルをインポート
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -18,70 +18,52 @@ class DatabaseHelper {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
 
-    // 既存のデータベースを削除
-    await deleteDatabase(path);
-
     return await openDatabase(
       path,
-      version: 3,
-      onCreate: _onCreate,
-      onUpgrade: _upgradeDB,
+      version: 1,
+      onCreate: _createDB,
     );
   }
 
-  Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 2) {
-      await db.execute('ALTER TABLE tasks ADD COLUMN taskColor INTEGER NOT NULL DEFAULT 4294967295');
-    }
-    if (oldVersion < 3) {
-      await db.execute('ALTER TABLE tasks ADD COLUMN description TEXT NOT NULL DEFAULT ""');
-    }
-  }
-
-  Future<void> _onCreate(Database db, int version) async {
+  Future<void> _createDB(Database db, int version) async {
     await db.execute('''
       CREATE TABLE tasks(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT NOT NULL,
-        description TEXT NOT NULL DEFAULT '',
-        deadline INTEGER,
         isCompleted INTEGER NOT NULL DEFAULT 0,
-        priority INTEGER NOT NULL DEFAULT 1,
+        deadline TEXT,
+        priority TEXT NOT NULL DEFAULT 'medium',
         category TEXT NOT NULL DEFAULT '未分類',
-        taskColor INTEGER NOT NULL DEFAULT 4294967295
+        taskColor INTEGER NOT NULL DEFAULT 0xFF2196F3,
+        completedAt TEXT
       )
     ''');
   }
 
-  Future<Task> create(Task task) async {
-    final db = await instance.database;
-    final id = await db.insert('tasks', task.toMap());
-    return task.id == null ? Task.fromMap({...task.toMap(), 'id': id}) : task;
-  }
-
-  Future<Task> read(int id) async {
-    final db = await instance.database;
-    final maps = await db.query(
-      'tasks',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-
-    if (maps.isNotEmpty) {
-      return Task.fromMap(maps.first);
-    } else {
-      throw Exception('ID $id not found');
-    }
-  }
-
+  // 全てのタスクを取得
   Future<List<Task>> getAllTasks() async {
-    final db = await instance.database;
+    final db = await database;
     final result = await db.query('tasks');
     return result.map((json) => Task.fromMap(json)).toList();
   }
 
+  // 新しいタスクを作成
+  Future<Task> create(Task task) async {
+    final db = await database;
+    final id = await db.insert('tasks', task.toMap());
+    return task.copy(id: id);
+  }
+
+  // タスクを更新
   Future<int> update(Task task) async {
-    final db = await instance.database;
+    final db = await database;
+    
+    if (task.isCompleted) {
+      task.completedAt = DateTime.now();
+    } else {
+      task.completedAt = null;
+    }
+
     return db.update(
       'tasks',
       task.toMap(),
@@ -90,8 +72,9 @@ class DatabaseHelper {
     );
   }
 
+  // タスクを削除
   Future<int> delete(int id) async {
-    final db = await instance.database;
+    final db = await database;
     return await db.delete(
       'tasks',
       where: 'id = ?',
@@ -99,8 +82,52 @@ class DatabaseHelper {
     );
   }
 
+  // 完了したタスクの数を取得
+  Future<int> getCompletedTaskCount() async {
+    final db = await database;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM tasks WHERE isCompleted = 1'
+    );
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  // 連続達成日数を取得
+  Future<int> getCurrentStreak() async {
+    final db = await database;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    
+    // 今日完了したタスクがあるか確認
+    final todayResult = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM tasks WHERE isCompleted = 1 AND date(completedAt) = date(?)',
+      [today.toIso8601String()]
+    );
+    final hasTodayCompleted = (Sqflite.firstIntValue(todayResult) ?? 0) > 0;
+
+    // 連続日数を計算
+    var streak = 0;
+    var currentDate = hasTodayCompleted ? today : today.subtract(const Duration(days: 1));
+
+    while (true) {
+      final result = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM tasks WHERE isCompleted = 1 AND date(completedAt) = date(?)',
+        [currentDate.toIso8601String()]
+      );
+      
+      if ((Sqflite.firstIntValue(result) ?? 0) == 0) {
+        break;
+      }
+      
+      streak++;
+      currentDate = currentDate.subtract(const Duration(days: 1));
+    }
+
+    return streak;
+  }
+
+  // データベースを閉じる
   Future<void> close() async {
-    final db = await instance.database;
+    final db = await database;
     db.close();
   }
 } 

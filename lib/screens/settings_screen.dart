@@ -3,10 +3,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/notification_service.dart';
 
 class SettingsScreen extends StatefulWidget {
+  final bool isDarkMode;
   final Function(bool) onDarkModeChanged;
   
   const SettingsScreen({
     super.key,
+    required this.isDarkMode,
     required this.onDarkModeChanged,
   });
 
@@ -15,13 +17,14 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool _isDarkMode = false;
+  late bool _isDarkMode;
   bool _isNotificationEnabled = true;
   bool _hasNotificationPermission = false;
 
   @override
   void initState() {
     super.initState();
+    _isDarkMode = widget.isDarkMode;
     _loadSettings();
   }
 
@@ -30,7 +33,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final hasPermission = await NotificationService().checkNotificationPermission();
     
     setState(() {
-      _isDarkMode = prefs.getBool('isDarkMode') ?? false;
+      _isDarkMode = prefs.getBool('isDarkMode') ?? widget.isDarkMode;
       _isNotificationEnabled = prefs.getBool('isNotificationEnabled') ?? true;
       _hasNotificationPermission = hasPermission;
     });

@@ -9,9 +9,10 @@ import 'services/database_helper.dart';
 import 'services/notification_service.dart';
 import 'screens/calendar_screen.dart';
 import 'screens/settings_screen.dart';  // 設定画面のインポートを追加
-import 'package:flutter/rendering.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/profile_screen.dart';  // ProfileScreenを追加する必要があります
+import 'package:provider/provider.dart';
+import 'models/user.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,7 +22,15 @@ void main() async {
   ]);
   tz.initializeTimeZones();
   tz.setLocalLocation(tz.getLocation('Asia/Tokyo'));
-  runApp(const MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => User(
+        nickname: "Default User",
+        // その他の初期値
+      ),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatefulWidget {
@@ -193,6 +202,14 @@ class _TaskListScreenState extends State<TaskListScreen> {
 
   Future<void> _loadTasks() async {
     final tasks = await DatabaseHelper.instance.getAllTasks();
+    final user = Provider.of<User>(context, listen: false);
+    
+    // タスクの読み込み時に完了タスク数を更新
+    int completedCount = tasks.where((task) => task.isCompleted).length;
+    if (user.totalCompletedTasks != completedCount) {
+      user.totalCompletedTasks = completedCount;
+    }
+
     setState(() {
       _tasks.clear();
       _tasks.addAll(tasks);
@@ -209,6 +226,55 @@ class _TaskListScreenState extends State<TaskListScreen> {
         return a.isCompleted ? 1 : -1;
       });
     });
+  }
+
+  Future<void> _handleTaskCompletion(Task task, bool isCompleted) async {
+    final user = Provider.of<User>(context, listen: false);
+    final lastCompletedTask = _tasks
+        .where((t) => t.isCompleted && t.completedAt != null)
+        .reduce((a, b) => a.completedAt!.isAfter(b.completedAt!) ? a : b);
+
+    if (isCompleted) {
+      task.isCompleted = true;
+      task.completedAt = DateTime.now();
+      user.completeTask(
+        task.completedAt!,
+        lastCompletedTask?.completedAt,
+        _isFirstTaskOfDay(task.completedAt!),
+      );
+    } else {
+      bool wasLastTaskOfDay = _isLastTaskOfDay(task);
+      task.isCompleted = false;
+      task.completedAt = null;
+      user.uncompleteTask(wasLastTaskOfDay);
+    }
+
+    await DatabaseHelper.instance.update(task);
+    _loadTasks();
+  }
+
+  bool _isFirstTaskOfDay(DateTime completedAt) {
+    return !_tasks.any((task) => 
+      task.isCompleted && 
+      task.completedAt != null &&
+      _isSameDay(task.completedAt!, completedAt)
+    );
+  }
+
+  bool _isLastTaskOfDay(Task task) {
+    if (!task.isCompleted || task.completedAt == null) return false;
+    return !_tasks.any((t) => 
+      t != task &&
+      t.isCompleted && 
+      t.completedAt != null &&
+      _isSameDay(t.completedAt!, task.completedAt!)
+    );
+  }
+
+  bool _isSameDay(DateTime date1, DateTime date2) {
+    return date1.year == date2.year && 
+           date1.month == date2.month && 
+           date1.day == date2.day;
   }
 
   @override
@@ -230,70 +296,24 @@ class _TaskListScreenState extends State<TaskListScreen> {
               context,
               CupertinoPageRoute(
                 builder: (context) => SettingsScreen(
+                  isDarkMode: widget.isDarkMode,
                   onDarkModeChanged: widget.onDarkModeChanged,
                 ),
               ),
             );
           },
         ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CupertinoButton(
-              padding: EdgeInsets.zero,
-              child: Text(
-                _isEditMode ? '完了' : '編集',
-                style: const TextStyle(fontSize: 17),
+        trailing: _isEditMode
+            ? _buildEditModeActions()
+            : CupertinoButton(
+                padding: EdgeInsets.zero,
+                child: Text(_isEditMode ? '完了' : '編集'),
+                onPressed: () {
+                  setState(() {
+                    _isEditMode = !_isEditMode;
+                  });
+                },
               ),
-              onPressed: () {
-                setState(() {
-                  _isEditMode = !_isEditMode;
-                });
-              },
-            ),
-            CupertinoButton(
-              padding: EdgeInsets.zero,
-              child: const Icon(CupertinoIcons.sort_down),
-              onPressed: () {
-                showCupertinoModalPopup(
-                  context: context,
-                  builder: (context) => CupertinoActionSheet(
-                    actions: [
-                      CupertinoActionSheetAction(
-                        onPressed: () {
-                          setState(() {
-                            _tasks.sort((a, b) => 
-                              b.priority.index.compareTo(a.priority.index));
-                          });
-                          Navigator.pop(context);
-                        },
-                        child: const Text('優先度でソート'),
-                      ),
-                      CupertinoActionSheetAction(
-                        onPressed: () {
-                          setState(() {
-                            _tasks.sort((a, b) {
-                              if (a.deadline == null) return 1;
-                              if (b.deadline == null) return -1;
-                              return a.deadline!.compareTo(b.deadline!);
-                            });
-                          });
-                          Navigator.pop(context);
-                        },
-                        child: const Text('期限でソート'),
-                      ),
-                    ],
-                    cancelButton: CupertinoActionSheetAction(
-                      onPressed: () => Navigator.pop(context),
-                      isDestructiveAction: true,
-                      child: const Text('キャンセル'),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
       ),
       child: SafeArea(
         child: Stack(
@@ -476,9 +496,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
     );
   }
 
-  Widget _buildTaskItem(Task task, {
-    bool isDragging = false,
-  }) {
+  Widget _buildTaskItem(Task task, {bool isDragging = false}) {
     return Dismissible(
       key: Key(task.id.toString()),
       direction: DismissDirection.endToStart,
@@ -552,9 +570,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
           ),
           boxShadow: [
             BoxShadow(
-              color: task.taskColor.withOpacity(
-                isDragging ? 0.15 : (task.isCompleted ? 0.05 : 0.1)
-              ),
+              color: task.taskColor.withAlpha(isDragging ? 38 : (task.isCompleted ? 13 : 25)),
               blurRadius: isDragging ? 16 : 8,
               offset: Offset(0, isDragging ? 6 : 2),
               spreadRadius: isDragging ? 1 : 0,
@@ -563,20 +579,33 @@ class _TaskListScreenState extends State<TaskListScreen> {
         ),
         child: Row(
           children: [
+            if (_isEditMode) ...[  // 編集モード時に選択チェックボックスを表示
+              CupertinoButton(
+                padding: const EdgeInsets.only(left: 16),
+                child: Icon(
+                  task.isSelected
+                      ? CupertinoIcons.checkmark_circle_fill
+                      : CupertinoIcons.circle,
+                  color: const Color(0xFFFF2A6D),
+                  size: 24,
+                ),
+                onPressed: () {
+                  setState(() {
+                    task.isSelected = !task.isSelected;
+                  });
+                },
+              ),
+            ],
             Expanded(
               child: CupertinoButton(
                 padding: EdgeInsets.zero,
                 onPressed: () async {
                   if (!_isEditMode) {
-                    task.isCompleted = !task.isCompleted;
-                    if (task.isCompleted) {
-                      task.completedAt = DateTime.now();
-                      HapticFeedback.mediumImpact();
-                    } else {
-                      task.completedAt = null;
-                    }
-                    await DatabaseHelper.instance.update(task);
-                    _loadTasks();
+                    await _handleTaskCompletion(task, !task.isCompleted);
+                  } else {
+                    setState(() {
+                      task.isSelected = !task.isSelected;
+                    });
                   }
                 },
                 child: Container(
@@ -670,6 +699,66 @@ class _TaskListScreenState extends State<TaskListScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildEditModeActions() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        CupertinoButton(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: const Text(
+            '削除',
+            style: TextStyle(
+              color: CupertinoColors.destructiveRed,
+            ),
+          ),
+          onPressed: () {
+            showCupertinoDialog(
+              context: context,
+              builder: (context) => CupertinoAlertDialog(
+                title: const Text('選択したタスクを削除'),
+                content: const Text('選択したタスクを削除しますか？'),
+                actions: [
+                  CupertinoDialogAction(
+                    isDestructiveAction: true,
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      // 選択されたタスクを削除
+                      for (var task in _tasks.where((t) => t.isSelected).toList()) {
+                        await DatabaseHelper.instance.delete(task.id!);
+                      }
+                      setState(() {
+                        _isEditMode = false;
+                      });
+                      _loadTasks();
+                    },
+                    child: const Text('削除'),
+                  ),
+                  CupertinoDialogAction(
+                    child: const Text('キャンセル'),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+        CupertinoButton(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: const Text('完了'),
+          onPressed: () {
+            setState(() {
+              _isEditMode = false;
+              // 選択状態をリセット
+              for (var task in _tasks) {
+                task.isSelected = false;
+              }
+            });
+          },
+        ),
+      ],
     );
   }
 

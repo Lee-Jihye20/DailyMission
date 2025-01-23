@@ -17,6 +17,7 @@ class Task {
   Color taskColor;
   bool isCompleted;
   DateTime? completedAt;
+  bool isSelected = false;
 
   Task({
     this.id,
@@ -27,6 +28,7 @@ class Task {
     required this.taskColor,
     this.isCompleted = false,
     this.completedAt,
+    this.isSelected = false,
   });
 
   Map<String, dynamic> toMap() {
@@ -52,6 +54,7 @@ class Task {
       taskColor: Color(map['taskColor']),
       isCompleted: map['isCompleted'] == 1,
       completedAt: map['completedAt'] != null ? DateTime.parse(map['completedAt']) : null,
+      isSelected: map['isSelected'] == 1,
     );
   }
     Task copy({
@@ -63,6 +66,7 @@ class Task {
     String? category,
     Color? taskColor,
     DateTime? completedAt,
+    bool? isSelected,
   }) {
     return Task(
       id: id ?? this.id,
@@ -73,6 +77,7 @@ class Task {
       category: category ?? this.category,
       taskColor: taskColor ?? this.taskColor,
       completedAt: completedAt ?? this.completedAt,
+      isSelected: isSelected ?? this.isSelected,
     );
   }
 } 

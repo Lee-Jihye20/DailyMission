@@ -1,6 +1,10 @@
 import 'package:flutter/cupertino.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/database_helper.dart';
+import 'package:provider/provider.dart';
+import '../models/user.dart';
+import '../screens/edit_profile_screen.dart';
+import 'dart:io';
 
 class ProfileScreen extends StatefulWidget {
   final bool isDarkMode;
@@ -19,7 +23,6 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   String _userName = '';
   final _userNameController = TextEditingController();
-  int _completedTaskCount = 0;
   int _currentStreak = 0;
 
   @override
@@ -44,19 +47,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadStatistics() async {
-    final completedCount = await DatabaseHelper.instance.getCompletedTaskCount();
     final streak = await DatabaseHelper.instance.getCurrentStreak();
     setState(() {
-      _completedTaskCount = completedCount;
       _currentStreak = streak;
-    });
-  }
-
-  Future<void> _saveUserProfile() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('userName', _userNameController.text);
-    setState(() {
-      _userName = _userNameController.text;
     });
   }
 
@@ -114,6 +107,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Userの状態を監視
+    final user = context.watch<User>();
+
     return CupertinoPageScaffold(
       backgroundColor: widget.isDarkMode 
           ? CupertinoColors.black 
@@ -123,6 +119,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ? CupertinoColors.black 
             : CupertinoColors.systemBackground,
         middle: const Text('プロフィール'),
+        trailing: CupertinoButton(
+          padding: EdgeInsets.zero,
+          child: const Text('編集'),
+          onPressed: () async {
+            await Navigator.push(
+              context,
+              CupertinoPageRoute(
+                builder: (context) => EditProfileScreen(
+                  isDarkMode: widget.isDarkMode,
+                ),
+              ),
+            );
+            _loadUserProfile();
+          },
+        ),
       ),
       child: SafeArea(
         child: SingleChildScrollView(
@@ -132,52 +143,57 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               const SizedBox(height: 20),
               Center(
-                child: Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    color: widget.isDarkMode 
-                        ? CupertinoColors.systemGrey 
-                        : CupertinoColors.systemGrey5,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    CupertinoIcons.person_fill,
-                    size: 60,
-                    color: widget.isDarkMode 
-                        ? CupertinoColors.white 
-                        : CupertinoColors.black,
-                  ),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        color: widget.isDarkMode 
+                            ? CupertinoColors.systemGrey 
+                            : CupertinoColors.systemGrey5,
+                        shape: BoxShape.circle,
+                        image: user.iconPath != null
+                            ? DecorationImage(
+                                image: FileImage(File(user.iconPath!)),
+                                fit: BoxFit.cover,
+                              )
+                            : null,
+                      ),
+                      child: user.iconPath == null
+                          ? Icon(
+                              CupertinoIcons.person_fill,
+                              size: 60,
+                              color: widget.isDarkMode 
+                                  ? CupertinoColors.white 
+                                  : CupertinoColors.black,
+                            )
+                          : null,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      user.nickname,
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: widget.isDarkMode 
+                            ? CupertinoColors.white 
+                            : CupertinoColors.black,
+                      ),
+                    ),
+                    Text(
+                      '@$_userName',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: widget.isDarkMode 
+                            ? CupertinoColors.systemGrey 
+                            : CupertinoColors.systemGrey2,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 32),
-              Text(
-                'ユーザー名',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: widget.isDarkMode 
-                      ? CupertinoColors.systemGrey 
-                      : CupertinoColors.systemGrey2,
-                ),
-              ),
-              const SizedBox(height: 8),
-              CupertinoTextField(
-                controller: _userNameController,
-                placeholder: 'ユーザー名を入力',
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: widget.isDarkMode 
-                      ? CupertinoColors.darkBackgroundGray 
-                      : CupertinoColors.systemGrey6,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                style: TextStyle(
-                  color: widget.isDarkMode 
-                      ? CupertinoColors.white 
-                      : CupertinoColors.black,
-                ),
-                onSubmitted: (_) => _saveUserProfile(),
-              ),
+              
               const SizedBox(height: 32),
               Text(
                 '統計',
@@ -203,7 +219,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Expanded(
                     child: _buildStatCard(
                       title: '完了タスク数',
-                      value: '$_completedTaskCount個',
+                      value: '${user.totalCompletedTasks}個',
                       icon: CupertinoIcons.check_mark_circled_solid,
                     ),
                   ),

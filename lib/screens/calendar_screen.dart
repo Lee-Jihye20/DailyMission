@@ -84,6 +84,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               context,
               CupertinoPageRoute(
                 builder: (context) => SettingsScreen(
+                  isDarkMode: widget.isDarkMode,
                   onDarkModeChanged: widget.onDarkModeChanged,
                 ),
               ),

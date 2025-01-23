@@ -76,7 +76,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ? CupertinoColors.black 
             : CupertinoColors.systemBackground,
         middle: const Text('カレンダー'),
-        leading: CupertinoButton(
+        trailing: CupertinoButton(
           padding: EdgeInsets.zero,
           child: const Icon(CupertinoIcons.settings),
           onPressed: () {
@@ -266,6 +266,89 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         );
                       },
                     ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class TaskList extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    // ここでタスクを取得するロジックを追加
+    final tasks = []; // 例: タスクのリストを取得
+
+    return ListView.builder(
+      itemCount: tasks.length,
+      itemBuilder: (context, index) {
+        final task = tasks[index];
+        return _buildTaskItem(task);
+      },
+    );
+  }
+
+  Widget _buildTaskItem(Task task) {
+    return Dismissible(
+      key: Key(task.id.toString()),
+      direction: DismissDirection.endToStart,
+      confirmDismiss: (direction) async {
+        // タスク削除の確認ダイアログを表示
+        return true; // 確認後に削除処理を行う
+      },
+      background: Container(
+        color: CupertinoColors.systemRed,
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        child: const Icon(CupertinoIcons.delete, color: CupertinoColors.white),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        decoration: BoxDecoration(
+          color: CupertinoColors.systemBackground,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: CupertinoColors.systemGrey.withOpacity(0.2),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 4,
+              height: 36,
+              decoration: BoxDecoration(
+                color: task.isCompleted ? CupertinoColors.systemGrey3 : task.taskColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    task.title,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      decoration: task.isCompleted ? TextDecoration.lineThrough : null,
+                    ),
+                  ),
+                  if (task.deadline != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      '期限: ${task.deadline}',
+                      style: TextStyle(color: CupertinoColors.systemGrey),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ],
         ),

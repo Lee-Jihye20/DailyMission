@@ -121,7 +121,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   rightChevronIcon: Icon(CupertinoIcons.right_chevron, size: 20),
                   formatButtonTextStyle: TextStyle(
                     fontSize: 14,
-                    color: CupertinoColors.activeBlue,
+                    color: const Color(0xFFFF2A6D),
                   ),
                   formatButtonDecoration: BoxDecoration(
                     borderRadius: BorderRadius.all(Radius.circular(12)),
@@ -140,15 +140,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   markersMaxCount: 4,
                   markerSize: 7,
                   markerDecoration: const BoxDecoration(
-                    color: CupertinoColors.activeBlue,
+                    color: const Color(0xFFFF2A6D),
                     shape: BoxShape.circle,
                   ),
                   todayDecoration: BoxDecoration(
-                    color: CupertinoColors.activeBlue.withOpacity(0.3),
+                    color: const Color(0xFFFF2A6D).withOpacity(0.3),
                     shape: BoxShape.circle,
                   ),
                   selectedDecoration: const BoxDecoration(
-                    color: CupertinoColors.activeBlue,
+                    color: const Color(0xFFFF2A6D),
                     shape: BoxShape.circle,
                   ),
                   weekendTextStyle: const TextStyle(color: CupertinoColors.systemRed),

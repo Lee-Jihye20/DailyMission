@@ -83,7 +83,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Icon(
             icon,
             size: 32,
-            color: CupertinoColors.activeBlue,
+            color: const Color(0xFFFF2A6D),
           ),
           const SizedBox(height: 8),
           Text(

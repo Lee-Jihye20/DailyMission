@@ -59,7 +59,7 @@ class _MyAppState extends State<MyApp> {
     return CupertinoApp(
       title: '毎日のタスク',
       theme: CupertinoThemeData(
-        primaryColor: CupertinoColors.systemBlue,
+        primaryColor: const Color(0xFFFF2A6D),
         brightness: _isDarkMode ? Brightness.dark : Brightness.light,
         scaffoldBackgroundColor: _isDarkMode 
             ? CupertinoColors.black 
@@ -88,7 +88,7 @@ class MainScreen extends StatelessWidget {
     return CupertinoTabScaffold(
       backgroundColor: isDarkMode 
           ? CupertinoColors.black 
-          : CupertinoColors.systemBackground,
+          : CupertinoColors.systemBackground, 
       tabBar: CupertinoTabBar(
         backgroundColor: isDarkMode 
             ? CupertinoColors.black 
@@ -459,7 +459,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
               right: 16,
               bottom: 24,
               child: CupertinoButton(
-                color: CupertinoColors.activeBlue,
+                color: const Color(0xFFFF2A6D),
                 padding: const EdgeInsets.all(20),
                 borderRadius: BorderRadius.circular(35),
                 onPressed: _showAddTaskDialog,
@@ -1192,7 +1192,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           decoration: BoxDecoration(
-                            color: CupertinoColors.activeBlue,
+                            color: const Color(0xFFFF2A6D),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Center(

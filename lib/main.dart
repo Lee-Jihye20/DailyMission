@@ -904,7 +904,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           decoration: BoxDecoration(
-                            color: CupertinoColors.activeBlue,
+                            color: const Color(0xFFFF2A6D),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Center(

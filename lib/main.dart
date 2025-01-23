@@ -230,9 +230,12 @@ class _TaskListScreenState extends State<TaskListScreen> {
 
   Future<void> _handleTaskCompletion(Task task, bool isCompleted) async {
     final user = Provider.of<User>(context, listen: false);
-    final lastCompletedTask = _tasks
-        .where((t) => t.isCompleted && t.completedAt != null)
-        .reduce((a, b) => a.completedAt!.isAfter(b.completedAt!) ? a : b);
+    final completedTasks = _tasks.where((t) => t.isCompleted && t.completedAt != null).toList();
+
+    Task? lastCompletedTask;
+    if (completedTasks.isNotEmpty) {
+      lastCompletedTask = completedTasks.reduce((a, b) => a.completedAt!.isAfter(b.completedAt!) ? a : b);
+    }
 
     if (isCompleted) {
       task.isCompleted = true;

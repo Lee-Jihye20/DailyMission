@@ -590,13 +590,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
               height: 10,
             ),
             Container(
-                width: 300,
+                width: double.infinity,
                 child: Container(
-                  width: 200,
                   height: 75,
                   decoration: BoxDecoration(
-                    color: const Color.fromARGB(255, 22, 22, 22),
-                    borderRadius: BorderRadius.circular(40),
+                    color: const Color.fromARGB(67, 22, 22, 22),
                   ),
                   child: CupertinoButton(
                     padding: EdgeInsets.zero,
@@ -617,7 +615,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       itemCount: _getTasksForDay(_selectedDay!).length,
                       separatorBuilder: (context, index) => Container(
                         height: 1,
-                        color: CupertinoColors.separator,
                       ),
                       itemBuilder: (context, index) {
                         final task = _getTasksForDay(_selectedDay!)[index];

@@ -479,15 +479,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CupertinoButton(
-              padding: EdgeInsets.zero,
-              child: const Icon(CupertinoIcons.add),
-              onPressed: () async {
-                print(_selectedDay);
-                await _showAddTaskDialog();
-                await _loadTasks();
-              },
-            ),
+
             CupertinoButton(
               padding: EdgeInsets.zero,
               child: const Icon(CupertinoIcons.settings),
@@ -595,9 +587,28 @@ class _CalendarScreenState extends State<CalendarScreen> {
               ),
             ),
             Container(
-              height: 1,
-              color: CupertinoColors.separator,
+              height: 10,
             ),
+            Container(
+                width: 300,
+                child: Container(
+                  width: 200,
+                  height: 75,
+                  decoration: BoxDecoration(
+                    color: const Color.fromARGB(255, 22, 22, 22),
+                    borderRadius: BorderRadius.circular(40),
+                  ),
+                  child: CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    child: const Text('タスクを追加', style: TextStyle(color: CupertinoColors.white)),
+                    onPressed: () async {
+                      print(_selectedDay);
+                      await _showAddTaskDialog();
+                      await _loadTasks();
+                    },
+                  ),
+                ),
+              ),
             Expanded(
               child: _selectedDay == null
                   ? const Center(child: Text('日付を選択してください'))

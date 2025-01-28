@@ -8,6 +8,12 @@ enum Priority {
   }
 }
 
+enum TaskPriority {
+  low,
+  medium,
+  high
+}
+
 class Task {
   final int? id;
   String title;
@@ -18,6 +24,7 @@ class Task {
   bool isCompleted;
   DateTime? completedAt;
   bool isSelected = false;
+  final TaskPriority taskPriority;
 
   Task({
     this.id,
@@ -29,6 +36,7 @@ class Task {
     this.isCompleted = false,
     this.completedAt,
     this.isSelected = false,
+    required this.taskPriority,
   });
 
   Map<String, dynamic> toMap() {
@@ -49,35 +57,39 @@ class Task {
       id: map['id'],
       title: map['title'],
       deadline: map['deadline'] != null ? DateTime.parse(map['deadline']) : null,
-      priority: Priority.values[map['priority']],
-      category: map['category'],
-      taskColor: Color(map['taskColor']),
+      priority: Priority.values[map['priority'] ?? 0],
+      category: map['category'] ?? '未分類',
+      taskColor: Color(map['taskColor'] ?? 0xFFFFC107),
       isCompleted: map['isCompleted'] == 1,
       completedAt: map['completedAt'] != null ? DateTime.parse(map['completedAt']) : null,
       isSelected: map['isSelected'] == 1,
+      taskPriority: TaskPriority.values[map['taskPriority'] ?? 1],
     );
   }
-    Task copy({
+
+  Task copyWith({
     int? id,
     String? title,
-    bool? isCompleted,
     DateTime? deadline,
     Priority? priority,
     String? category,
     Color? taskColor,
+    bool? isCompleted,
     DateTime? completedAt,
     bool? isSelected,
+    TaskPriority? taskPriority,
   }) {
     return Task(
       id: id ?? this.id,
       title: title ?? this.title,
-      isCompleted: isCompleted ?? this.isCompleted,
       deadline: deadline ?? this.deadline,
       priority: priority ?? this.priority,
       category: category ?? this.category,
       taskColor: taskColor ?? this.taskColor,
+      isCompleted: isCompleted ?? this.isCompleted,
       completedAt: completedAt ?? this.completedAt,
       isSelected: isSelected ?? this.isSelected,
+      taskPriority: taskPriority ?? this.taskPriority,
     );
   }
 } 

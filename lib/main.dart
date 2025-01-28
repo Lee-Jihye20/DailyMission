@@ -185,11 +185,15 @@ class _TaskListScreenState extends State<TaskListScreen> {
     const Color(0xFF9C27B0),  // 紫
     const Color(0xFFFF5722),  // オレンジ
   ];
+  String selectedCategory = '未分類';
 
   @override
   void initState() {
     super.initState();
     _loadTasks();
+    DatabaseHelper.instance.onTasksUpdated.listen((_) {
+      _loadTasks();
+    });
     NotificationService().initialize();
   }
 
@@ -201,7 +205,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
   }
 
   Future<void> _loadTasks() async {
-    final tasks = await DatabaseHelper.instance.getAllTasks();
+    final tasks = await DatabaseHelper.instance.getTodayTasks();
     final user = Provider.of<User>(context, listen: false);
     
     // タスクの読み込み時に完了タスク数を更新
@@ -485,7 +489,10 @@ class _TaskListScreenState extends State<TaskListScreen> {
                 color: const Color(0xFFFF2A6D),
                 padding: const EdgeInsets.all(20),
                 borderRadius: BorderRadius.circular(35),
-                onPressed: _showAddTaskDialog,
+                onPressed: () async {  // asyncを追加
+                  await _showAddTaskDialog();  // awaitを追加
+                  _loadTasks();  // ダイアログが閉じた後にタスクを再読み込み
+                },
                 child: const Icon(
                   CupertinoIcons.add,
                   color: CupertinoColors.white,
@@ -630,52 +637,41 @@ class _TaskListScreenState extends State<TaskListScreen> {
                       ),
                       const SizedBox(width: 16),
                       Expanded(
-                        child: Row(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    task.title,
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w600,
-                                      decoration: task.isCompleted
-                                          ? TextDecoration.lineThrough
-                                          : null,
-                                      color: task.isCompleted
-                                          ? CupertinoColors.systemGrey
-                                          : CupertinoColors.label,
-                                    ),
-                                  ),
-                                  if (task.isCompleted) ...[
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      '完了',
-                                      style: TextStyle(
-                                        color: CupertinoColors.systemRed.withOpacity(0.5),
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ],
+                            Text(
+                              task.title,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w600,
+                                decoration: task.isCompleted
+                                    ? TextDecoration.lineThrough
+                                    : null,
+                                color: task.isCompleted
+                                    ? CupertinoColors.systemGrey
+                                    : CupertinoColors.label,
                               ),
                             ),
-                            if (task.deadline != null) ...[
-                              const SizedBox(width: 8),
+                            if (task.isCompleted) ...[
+                              const SizedBox(height: 4),
                               Text(
-                                '${task.deadline!.hour.toString().padLeft(2, '0')}:${task.deadline!.minute.toString().padLeft(2, '0')}',
+                                '完了',
                                 style: TextStyle(
-                                  fontSize: 15,
-                                  color: task.isCompleted
-                                      ? CupertinoColors.systemGrey3
-                                      : task.taskColor,
-                                  fontWeight: FontWeight.w500,
+                                  color: CupertinoColors.systemRed.withOpacity(0.5),
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
                                 ),
+                              ),
+                            ],
+                            // カテゴリーを表示
+                            if (!task.isCompleted) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                'カテゴリー: ${task.category}', // カテゴリーを表示
+                                style: TextStyle(color: CupertinoColors.systemGrey),
                               ),
                             ],
                           ],
@@ -766,11 +762,13 @@ class _TaskListScreenState extends State<TaskListScreen> {
   }
 
   Future<void> _showAddTaskDialog() async {
-    DateTime? tempSelectedTime = _selectedTime;  // 一時的な時刻変数を追加
-    Color? tempSelectedColor = _selectedColor;   // 一時的な色変数を追加
+    DateTime? tempSelectedTime = _selectedTime;
+    Color? tempSelectedColor = _selectedColor;
     _selectedTime = null;
     _selectedColor = null;
     _textController.clear();
+
+    final List<String> predefinedCategories = ['仕事', '個人', '買い物', '勉強', 'その他'];
 
     showCupertinoModalPopup(
       context: context,
@@ -873,6 +871,95 @@ class _TaskListScreenState extends State<TaskListScreen> {
                     showCupertinoModalPopup(
                       context: context,
                       builder: (context) => Container(
+                        height: 200,
+                        color: widget.isDarkMode 
+                            ? CupertinoColors.black 
+                            : CupertinoColors.systemBackground,
+                        child: Column(
+                          children: [
+                            Container(
+                              height: 40,
+                              decoration: BoxDecoration(
+                                border: Border(
+                                  bottom: BorderSide(
+                                    color: widget.isDarkMode 
+                                        ? CupertinoColors.darkBackgroundGray 
+                                        : CupertinoColors.systemGrey5,
+                                    width: 1,
+                                  ),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  CupertinoButton(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                                    child: const Text('キャンセル'),
+                                    onPressed: () => Navigator.pop(context),
+                                  ),
+                                  CupertinoButton(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                                    child: const Text('完了'),
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Expanded(
+                              child: CupertinoPicker(
+                                itemExtent: 32,
+                                onSelectedItemChanged: (index) {
+                                  setModalState(() {
+                                    selectedCategory = predefinedCategories[index];
+                                  });
+                                },
+                                children: predefinedCategories
+                                    .map((category) => Text(category))
+                                    .toList(),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: widget.isDarkMode 
+                          ? CupertinoColors.darkBackgroundGray 
+                          : CupertinoColors.systemGrey6,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          CupertinoIcons.tag,
+                          color: widget.isDarkMode 
+                              ? CupertinoColors.systemGrey2 
+                              : CupertinoColors.systemGrey,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          selectedCategory,
+                          style: TextStyle(
+                            color: CupertinoColors.systemGrey,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                GestureDetector(
+                  onTap: () {
+                    showCupertinoModalPopup(
+                      context: context,
+                      builder: (context) => Container(
                         height: 216,
                         color: widget.isDarkMode 
                             ? CupertinoColors.black 
@@ -903,7 +990,6 @@ class _TaskListScreenState extends State<TaskListScreen> {
                                     padding: const EdgeInsets.symmetric(horizontal: 16),
                                     child: const Text('完了'),
                                     onPressed: () {
-                                      setModalState(() {});  // 親のStatefulBuilderの状態を更新
                                       Navigator.pop(context);
                                     },
                                   ),
@@ -1026,8 +1112,9 @@ class _TaskListScreenState extends State<TaskListScreen> {
                               title: _textController.text,
                               deadline: deadline,
                               priority: Priority.medium,
-                              category: '未分類',
-                              taskColor: tempSelectedColor ?? CupertinoColors.white,
+                              category: selectedCategory,
+                              taskColor: const Color(0xFFFFC107),
+                              taskPriority: TaskPriority.medium,
                             );
                             final savedTask = await DatabaseHelper.instance.create(task);
                             

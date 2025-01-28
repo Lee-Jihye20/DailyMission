@@ -1,16 +1,26 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/task.dart';  // Taskモデルをインポート
+import 'dart:async';
 
 class DatabaseHelper {
   static final _databaseName = "my_database.db";
-  static final _databaseVersion = 3; // スキーマ変更後のバージョン番号を更新
+  static final _databaseVersion = 4; // スキーマ変更後のバージョン番号を更新
 
   static Database? _database;
 
   // Singletonパターン
   DatabaseHelper._privateConstructor();
   static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
+
+  // StreamControllerを追加
+  final _taskUpdateController = StreamController<void>.broadcast();
+  Stream<void> get onTasksUpdated => _taskUpdateController.stream;
+
+  // 更新を通知するメソッド
+  void notifyListeners() {
+    _taskUpdateController.add(null);
+  }
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -39,7 +49,8 @@ class DatabaseHelper {
         category TEXT,
         taskColor INTEGER,
         isCompleted INTEGER,
-        completedAt TEXT
+        completedAt TEXT,
+        taskPriority INTEGER
       )
     ''');
   }
@@ -51,6 +62,10 @@ class DatabaseHelper {
       print('Adding completedAt column...');
       await db.execute('ALTER TABLE tasks ADD COLUMN completedAt TEXT');
     }
+    if (oldVersion < 4) {
+      print('Adding taskPriority column...');
+      await db.execute('ALTER TABLE tasks ADD COLUMN taskPriority INTEGER DEFAULT 1');
+    }
   }
 
   // 全てのタスクを取得
@@ -59,12 +74,23 @@ class DatabaseHelper {
     final result = await db.query('tasks');
     return result.map((json) => Task.fromMap(json)).toList();
   }
-
+  Future<List<Task>> getTodayTasks() async {
+    final db = await database;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final result = await db.query(
+      'tasks',
+      where: 'date(deadline) = date(?)',
+      whereArgs: [today.toIso8601String()],
+    );
+    return result.map((json) => Task.fromMap(json)).toList();
+  }
   // 新しいタスクを作成
   Future<Task> create(Task task) async {
     final db = await database;
+    task.deadline = task.deadline ?? DateTime.now(); // デフォルトで現在の日付を設定
     final id = await db.insert('tasks', task.toMap());
-    return task.copy(id: id);
+    return task.copyWith(id: id);
   }
 
   // タスクを更新
@@ -140,6 +166,7 @@ class DatabaseHelper {
 
   // データベースを閉じる
   Future<void> close() async {
+    await _taskUpdateController.close();
     final db = await database;
     db.close();
   }
@@ -182,5 +209,10 @@ class DatabaseHelper {
     final db = await database;
     final result = await db.rawQuery("PRAGMA table_info(tasks);");
     print('Column info: $result');
+  }
+
+  Future<int> insert(Task task) async {
+    final db = await database;
+    return await db.insert('tasks', task.toMap());
   }
 } 

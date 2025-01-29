@@ -7,6 +7,8 @@ class User extends ChangeNotifier {
   int currentStreak;
   int bestStreak;
   int totalCompletedTasks;
+  int streakDays;  // 連続達成日数を追加
+  DateTime? lastCompletedDate;  // 最後にタスクを完了した日付
 
   User({
     this.id,
@@ -15,6 +17,8 @@ class User extends ChangeNotifier {
     this.currentStreak = 0,
     this.bestStreak = 0,
     this.totalCompletedTasks = 0,
+    this.streakDays = 0,  // 初期値は0
+    this.lastCompletedDate,
   });
 
   Map<String, dynamic> toMap() {
@@ -25,6 +29,8 @@ class User extends ChangeNotifier {
       'currentStreak': currentStreak,
       'bestStreak': bestStreak,
       'totalCompletedTasks': totalCompletedTasks,
+      'streakDays': streakDays,
+      'lastCompletedDate': lastCompletedDate,
     };
   }
 
@@ -36,6 +42,8 @@ class User extends ChangeNotifier {
       currentStreak: map['currentStreak'],
       bestStreak: map['bestStreak'],
       totalCompletedTasks: map['totalCompletedTasks'],
+      streakDays: map['streakDays'],
+      lastCompletedDate: map['lastCompletedDate'],
     );
   }
 
@@ -46,6 +54,8 @@ class User extends ChangeNotifier {
     int? currentStreak,
     int? bestStreak,
     int? totalCompletedTasks,
+    int? streakDays,
+    DateTime? lastCompletedDate,
   }) {
     return User(
       id: id ?? this.id,
@@ -54,6 +64,8 @@ class User extends ChangeNotifier {
       currentStreak: currentStreak ?? this.currentStreak,
       bestStreak: bestStreak ?? this.bestStreak,
       totalCompletedTasks: totalCompletedTasks ?? this.totalCompletedTasks,
+      streakDays: streakDays ?? this.streakDays,
+      lastCompletedDate: lastCompletedDate ?? this.lastCompletedDate,
     );
   }
 
@@ -85,11 +97,36 @@ class User extends ChangeNotifier {
     notifyListeners(); // 更新を通知
   }
 
-  // 同じ日かどうかを判定
+  // 一日のすべてのタスクを完了したときに呼び出すメソッド
+  void completeAllDailyTasks(DateTime completedDate) {
+    if (lastCompletedDate == null) {
+      streakDays = 1;
+    } else {
+      // 前回の完了日が昨日かどうかをチェック
+      final yesterday = DateTime(
+        completedDate.year,
+        completedDate.month,
+        completedDate.day - 1,
+      );
+      
+      if (_isSameDay(lastCompletedDate!, yesterday)) {
+        // 連続達成
+        streakDays++;
+      } else if (!_isSameDay(lastCompletedDate!, completedDate)) {
+        // 連続が途切れた場合
+        streakDays = 1;
+      }
+    }
+    
+    lastCompletedDate = completedDate;
+    notifyListeners();
+  }
+
+  // 日付が同じかどうかをチェック
   bool _isSameDay(DateTime date1, DateTime date2) {
-    return date1.year == date2.year && 
-            date1.month == date2.month && 
-            date1.day == date2.day;
+    return date1.year == date2.year &&
+           date1.month == date2.month &&
+           date1.day == date2.day;
   }
 
   // 連続した日かどうかを判定

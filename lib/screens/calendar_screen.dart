@@ -41,6 +41,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   ];
 
   String selectedCategory = '未分類';
+  int selectedImportance = 1;  // 重要度のデフォルト値
 
   @override
   void initState() {
@@ -49,6 +50,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
     _focusedDay = DateTime(now.year, now.month, now.day);
     _selectedDay = _focusedDay;
     _loadTasks();
+    
+    // データベースの変更を監視
     DatabaseHelper.instance.onTasksUpdated.listen((_) {
       _loadTasks();
     });
@@ -60,6 +63,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
     _selectedTime = null;
     _selectedColor = null;
     _textController.clear();
+    String selectedCategory = '未分類';
+    int selectedImportance = 1;  // 重要度のデフォルト値
 
     final List<String> predefinedCategories = ['仕事', '個人', '買い物', '勉強', 'その他'];
 
@@ -168,52 +173,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         color: widget.isDarkMode 
                             ? CupertinoColors.black 
                             : CupertinoColors.systemBackground,
-                        child: Column(
-                          children: [
-                            Container(
-                              height: 40,
-                              decoration: BoxDecoration(
-                                border: Border(
-                                  bottom: BorderSide(
-                                    color: widget.isDarkMode 
-                                        ? CupertinoColors.darkBackgroundGray 
-                                        : CupertinoColors.systemGrey5,
-                                    width: 1,
-                                  ),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  CupertinoButton(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                                    child: const Text('キャンセル'),
-                                    onPressed: () => Navigator.pop(context),
-                                  ),
-                                  CupertinoButton(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                                    child: const Text('完了'),
-                                    onPressed: () {
-                                      Navigator.pop(context);
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Expanded(
-                              child: CupertinoPicker(
-                                itemExtent: 32,
-                                onSelectedItemChanged: (index) {
-                                  setModalState(() {
-                                    selectedCategory = predefinedCategories[index];
-                                  });
-                                },
-                                children: predefinedCategories
-                                    .map((category) => Text(category))
-                                    .toList(),
-                              ),
-                            ),
-                          ],
+                        child: CupertinoPicker(
+                          itemExtent: 32,
+                          onSelectedItemChanged: (index) {
+                            setModalState(() {
+                              selectedCategory = predefinedCategories[index];
+                            });
+                          },
+                          children: predefinedCategories
+                              .map((category) => Text(category))
+                              .toList(),
                         ),
                       ),
                     );
@@ -245,6 +214,60 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         ),
                       ],
                     ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Container(
+                  margin: const EdgeInsets.symmetric(vertical: 16),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: widget.isDarkMode 
+                        ? CupertinoColors.darkBackgroundGray 
+                        : CupertinoColors.systemGrey6,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('重要度'),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: List.generate(5, (index) {
+                          final number = index + 1;
+                          return GestureDetector(
+                            onTap: () {
+                              setModalState(() {
+                                selectedImportance = number;
+                              });
+                            },
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: selectedImportance == number
+                                    ? const Color(0xFFFF2A6D)
+                                    : Colors.transparent,
+                                border: Border.all(
+                                  color: const Color(0xFFFF2A6D),
+                                ),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  number.toString(),
+                                  style: TextStyle(
+                                    color: selectedImportance == number
+                                        ? CupertinoColors.white
+                                        : const Color(0xFFFF2A6D),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -323,16 +346,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         const SizedBox(width: 8),
                         Text(
                           tempSelectedTime == null
-                              ? '時刻を設定'
+                              ? '時刻の設定'
                               : '${tempSelectedTime!.hour.toString().padLeft(2, '0')}:${tempSelectedTime!.minute.toString().padLeft(2, '0')}',
                           style: TextStyle(
-                            color: tempSelectedTime == null
-                                ? (widget.isDarkMode 
-                                    ? CupertinoColors.systemGrey2 
-                                    : CupertinoColors.systemGrey)
-                                : (widget.isDarkMode 
-                                    ? CupertinoColors.white 
-                                    : CupertinoColors.label),
+                            color: CupertinoColors.systemGrey,
                             fontSize: 16,
                           ),
                         ),
@@ -407,6 +424,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                               category: selectedCategory,
                               taskColor: tempSelectedColor ?? const Color(0xFFFFC107),
                               taskPriority: TaskPriority.medium,
+                              importance: selectedImportance,  // 重要度を追加
                             );
                             final savedTask = await DatabaseHelper.instance.create(task);
                             
@@ -597,7 +615,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   ),
                   weekendTextStyle: const TextStyle(color: CupertinoColors.systemRed),
                   outsideTextStyle: const TextStyle(color: CupertinoColors.systemGrey3),
-                  defaultTextStyle: const TextStyle(fontSize: 14),
+                  defaultTextStyle: TextStyle(
+                    fontSize: 14,
+                    color: Theme.of(context).brightness == Brightness.light 
+                        ? Colors.black 
+                        : Colors.white,
+                  ),
                 ),
                 onDaySelected: (selectedDay, focusedDay) {
                   if (!isSameDay(_selectedDay, selectedDay)) {
@@ -630,28 +653,26 @@ class _CalendarScreenState extends State<CalendarScreen> {
               width: double.infinity,
               child: Container(
                 height: 75,
+                margin: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
-                  color: CupertinoColors.systemBackground,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: CupertinoColors.systemGrey5,
-                    width: 1,
-                  ),
+                  color: const Color(0xFFFF2A6D),
+                  borderRadius: BorderRadius.circular(15),
                   boxShadow: [
                     BoxShadow(
-                      color: CupertinoColors.systemGrey.withOpacity(0.2),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
+                      color: const Color(0xFFFF2A6D).withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),
                 child: CupertinoButton(
                   padding: EdgeInsets.zero,
-                  child: Text(
+                  child: const Text(
                     'タスクを追加',
                     style: TextStyle(
-                      color: const Color(0xFFFF2A6D),
+                      color: CupertinoColors.white,
                       fontWeight: FontWeight.w600,
+                      fontSize: 16,
                     ),
                   ),
                   onPressed: () async {
@@ -662,6 +683,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 ),
               ),
             ),
+            const SizedBox(height: 8),
             Expanded(
               child: _selectedDay == null
                   ? const Center(child: Text('日付を選択してください'))
@@ -713,7 +735,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
         );
         if (result == true) {
           await DatabaseHelper.instance.delete(task.id!);
+          DatabaseHelper.instance.notifyTasksUpdated();
           await _loadTasks();
+          widget.onTasksUpdated?.call();
           return true;
         }
         return false;
@@ -744,6 +768,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
               task.completedAt = null;
             });
             await DatabaseHelper.instance.update(task);
+            DatabaseHelper.instance.notifyTasksUpdated();
+            await _loadTasks();
+            widget.onTasksUpdated?.call();
           } else {
             _showTaskDetails(task);
           }
@@ -755,6 +782,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
               task.completedAt = DateTime.now();
             });
             await DatabaseHelper.instance.update(task);
+            DatabaseHelper.instance.notifyTasksUpdated();
+            await _loadTasks();
+            widget.onTasksUpdated?.call();
           }
         },
         child: Container(
@@ -764,36 +794,36 @@ class _CalendarScreenState extends State<CalendarScreen> {
           decoration: BoxDecoration(
             color: task.isCompleted 
                 ? (widget.isDarkMode
-                    ? const Color(0xFF2D8C3C).withOpacity(0.2)  // ダークモード時の完了背景色
+                    ? const Color(0xFFFF2A6D).withOpacity(0.2)  // ダークモード時は薄いピンク
                     : const Color(0xFFFF2A6D).withOpacity(0.1))
                 : (widget.isDarkMode
-                    ? const Color(0xFF1A1A1A)  // ダークモード時の未完了背景色
+                    ? const Color(0xFF1A1A1A)
                     : CupertinoColors.systemBackground),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: task.isCompleted
                   ? (widget.isDarkMode
-                      ? const Color(0xFF2D8C3C).withOpacity(0.4)  // ダークモード時の完了ボーダー色
+                      ? const Color(0xFFFF2A6D).withOpacity(0.4)  // ダークモード時は薄いピンクのボーダー
                       : const Color(0xFFFF2A6D).withOpacity(0.2))
                   : (widget.isDarkMode
-                      ? const Color(0xFF2D8C3C).withOpacity(0.3)  // ダークモード時の未完了ボーダー色
+                      ? const Color(0xFF2D8C3C).withOpacity(0.3)
                       : CupertinoColors.systemGrey5),
-              width: widget.isDarkMode ? 1.5 : 1,  // ダークモード時はボーダーを少し太く
+              width: widget.isDarkMode ? 1.5 : 1,
             ),
             boxShadow: [
               BoxShadow(
                 color: task.isCompleted 
                     ? (widget.isDarkMode
-                        ? const Color(0xFF2D8C3C).withOpacity(0.3)  // ダークモード時の完了シャドウ色
+                        ? const Color(0xFFFF2A6D).withOpacity(0.3)  // ダークモード時は薄いピンクのシャドウ
                         : const Color(0xFFFF2A6D).withOpacity(0.1))
                     : (widget.isDarkMode
-                        ? const Color(0xFF2D8C3C).withOpacity(0.15)  // ダークモード時の未完了シャドウ色
+                        ? const Color(0xFF2D8C3C).withOpacity(0.15)
                         : CupertinoColors.systemGrey.withOpacity(0.2)),
-                blurRadius: widget.isDarkMode ? 6 : 4,  // ダークモード時はブラーを強く
+                blurRadius: widget.isDarkMode ? 6 : 4,
                 offset: widget.isDarkMode 
-                    ? const Offset(0, 3)  // ダークモード時はシャドウを少し下に
+                    ? const Offset(0, 3)
                     : const Offset(0, 2),
-                spreadRadius: widget.isDarkMode ? 0.5 : 0,  // ダークモード時は広がりを追加
+                spreadRadius: widget.isDarkMode ? 0.5 : 0,
               ),
             ],
           ),
@@ -820,15 +850,43 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         fontWeight: FontWeight.w600,
                         decoration: task.isCompleted ? TextDecoration.lineThrough : null,
                         color: task.isCompleted 
-                            ? CupertinoColors.systemGrey 
-                            : const Color(0xFFFF2A6D),
+                            ? CupertinoColors.systemGrey
+                            : (Theme.of(context).brightness == Brightness.light 
+                                ? Colors.black 
+                                : const Color(0xFFFF2A6D)),
                       ),
                     ),
                     if (!task.isCompleted) ...[
                       const SizedBox(height: 4),
-                      Text(
-                        'カテゴリー: ${task.category}',
-                        style: TextStyle(color: CupertinoColors.systemGrey),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    'カテゴリー: ${task.category}',
+                                    style: TextStyle(
+                                      color: widget.isDarkMode
+                                          ? const Color(0xFFFF2A6D).withOpacity(0.7)
+                                          : CupertinoColors.systemGrey,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),  // カテゴリーと重要度の間のスペース
+                                Text(
+                                  '重要度: ${task.importance}',
+                                  style: TextStyle(
+                                    color: widget.isDarkMode
+                                        ? const Color(0xFFFF2A6D).withOpacity(0.7)
+                                        : CupertinoColors.systemGrey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ],
@@ -839,7 +897,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   '${task.deadline!.hour.toString().padLeft(2, '0')}:${task.deadline!.minute.toString().padLeft(2, '0')}',
                   style: TextStyle(
                     fontSize: 15,
-                    color: task.isCompleted ? CupertinoColors.systemGrey3 : task.taskColor,
+                    color: task.isCompleted 
+                        ? CupertinoColors.systemGrey3 
+                        : task.taskColor,  // タスクごとに設定された色を使用
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -862,9 +922,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
               ? CupertinoColors.black 
               : CupertinoColors.systemBackground,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          border: Border.all(
+            color: widget.isDarkMode
+                ? const Color(0xFFFF2A6D)
+                : CupertinoColors.systemGrey.withOpacity(0.3),
+            width: 1.5,
+          ),
           boxShadow: [
             BoxShadow(
-              color: CupertinoColors.black.withOpacity(0.1),
+              color: widget.isDarkMode
+                  ? const Color(0xFFFF2A6D).withOpacity(0.1)
+                  : CupertinoColors.black.withOpacity(0.1),
               blurRadius: 10,
               offset: const Offset(0, -2),
             ),
@@ -873,39 +941,58 @@ class _CalendarScreenState extends State<CalendarScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: widget.isDarkMode 
-                      ? CupertinoColors.systemGrey 
-                      : CupertinoColors.systemGrey4,
-                  borderRadius: BorderRadius.circular(2),
-                ),
+            Text(
+              task.title,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 16),
-            Text(
-              'タスクの詳細',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: widget.isDarkMode 
-                    ? CupertinoColors.white 
-                    : CupertinoColors.black,
-              ),
+            Row(
+              children: [
+                Icon(
+                  CupertinoIcons.tag,
+                  color: widget.isDarkMode 
+                      ? CupertinoColors.systemGrey2 
+                      : CupertinoColors.systemGrey,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'カテゴリー: ${task.category}',
+                  style: TextStyle(
+                    color: widget.isDarkMode
+                        ? const Color(0xFFFF2A6D).withOpacity(0.7)
+                        : CupertinoColors.systemGrey,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 24),
-            _buildDetailRow('タイトル', task.title),
-            _buildDetailRow('カテゴリー', task.category),
-            if (task.deadline != null)
-              _buildDetailRow(
-                '時間', 
-                '${task.deadline!.hour.toString().padLeft(2, '0')}:${task.deadline!.minute.toString().padLeft(2, '0')}'
-              ),
-            _buildDetailRow('状態', task.isCompleted ? '完了' : '未完了'),
-            const Spacer(),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(
+                  CupertinoIcons.star,
+                  color: widget.isDarkMode 
+                      ? CupertinoColors.systemGrey2 
+                      : CupertinoColors.systemGrey,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '重要度: ${task.importance}',
+                  style: TextStyle(
+                    color: widget.isDarkMode
+                        ? const Color(0xFFFF2A6D).withOpacity(0.7)
+                        : CupertinoColors.systemGrey,
+                  ),
+                ),
+              ],
+            ),
+            const Spacer(),  // 下部にボタンを配置するためのスペーサー
+            
+            // 閉じるボタン
             CupertinoButton(
               padding: EdgeInsets.zero,
               child: Container(
@@ -913,13 +1000,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFF2A6D),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Center(
                   child: Text(
                     '閉じる',
                     style: TextStyle(
                       color: CupertinoColors.white,
+                      fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -929,40 +1017,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 80,
-            child: Text(
-              label,
-              style: TextStyle(
-                color: widget.isDarkMode 
-                    ? CupertinoColors.systemGrey 
-                    : CupertinoColors.systemGrey2,
-                fontSize: 16,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(
-                fontSize: 16,
-                color: widget.isDarkMode 
-                    ? CupertinoColors.white 
-                    : CupertinoColors.black,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

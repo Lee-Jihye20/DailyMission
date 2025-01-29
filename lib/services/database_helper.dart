@@ -5,22 +5,13 @@ import 'dart:async';
 
 class DatabaseHelper {
   static final _databaseName = "my_database.db";
-  static final _databaseVersion = 5; // バージョンを5に更新
+  static final _databaseVersion = 6;  // バージョンを上げる
 
   static Database? _database;
 
   // Singletonパターン
   DatabaseHelper._privateConstructor();
   static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
-
-  // StreamControllerを追加
-  final _taskUpdateController = StreamController<void>.broadcast();
-  Stream<void> get onTasksUpdated => _taskUpdateController.stream;
-
-  // 更新を通知するメソッド
-  void notifyListeners() {
-    _taskUpdateController.add(null);
-  }
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -51,7 +42,8 @@ class DatabaseHelper {
         isCompleted INTEGER,
         completedAt TEXT,
         taskPriority INTEGER,
-        `order` INTEGER
+        `order` INTEGER,
+        importance INTEGER
       )
     ''');
   }
@@ -59,6 +51,7 @@ class DatabaseHelper {
   // バージョンアップ時（マイグレーション）
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
     print('Upgrading database from version $oldVersion to $newVersion');
+    
     if (oldVersion < 2) {
       print('Adding completedAt column...');
       await db.execute('ALTER TABLE tasks ADD COLUMN completedAt TEXT');
@@ -67,7 +60,6 @@ class DatabaseHelper {
       print('Adding taskPriority column...');
       var result = await db.rawQuery("PRAGMA table_info(tasks)");
       bool columnExists = result.any((column) => column['name'] == 'taskPriority');
-
       if (!columnExists) {
         await db.execute("ALTER TABLE tasks ADD COLUMN taskPriority INTEGER DEFAULT 1");
       }
@@ -76,20 +68,16 @@ class DatabaseHelper {
       print('Adding order column...');
       var result = await db.rawQuery("PRAGMA table_info(tasks)");
       bool columnExists = result.any((column) => column['name'] == 'order');
-
       if (!columnExists) {
         await db.execute("ALTER TABLE tasks ADD COLUMN `order` INTEGER DEFAULT 0");
-        
-        // 既存のタスクに順序を設定
-        final tasks = await db.query('tasks', orderBy: 'id ASC');
-        for (int i = 0; i < tasks.length; i++) {
-          await db.update(
-            'tasks',
-            {'order': i},
-            where: 'id = ?',
-            whereArgs: [tasks[i]['id']],
-          );
-        }
+      }
+    }
+    if (oldVersion < 6) {
+      print('Adding importance column...');
+      var result = await db.rawQuery("PRAGMA table_info(tasks)");
+      bool columnExists = result.any((column) => column['name'] == 'importance');
+      if (!columnExists) {
+        await db.execute("ALTER TABLE tasks ADD COLUMN importance INTEGER DEFAULT 1");
       }
     }
   }
@@ -194,7 +182,7 @@ class DatabaseHelper {
 
   // データベースを閉じる
   Future<void> close() async {
-    await _taskUpdateController.close();
+    await _tasksUpdateController.close();
     final db = await database;
     db.close();
   }
@@ -269,5 +257,26 @@ class DatabaseHelper {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, _databaseName);
     await databaseFactory.deleteDatabase(path);  // databaseFactoryを使用
+  }
+
+  // StreamController を追加
+  final _tasksUpdateController = StreamController<void>.broadcast();
+  
+  // Stream を公開
+  Stream<void> get onTasksUpdated => _tasksUpdateController.stream;
+
+  // 通知メソッドを追加
+  void notifyTasksUpdated() {
+    _tasksUpdateController.add(null);
+  }
+
+  // dispose メソッドを追加（必要に応じて）
+  void dispose() {
+    _tasksUpdateController.close();
+  }
+
+  // アプリ起動時にデータベースを再作成
+  static Future<void> initializeDatabase() async {
+    await instance.recreateDatabase();
   }
 } 

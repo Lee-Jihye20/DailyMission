@@ -26,6 +26,7 @@ class Task {
   bool isSelected = false;
   final TaskPriority taskPriority;
   int order;
+  final int importance;
 
   Task({
     this.id,
@@ -39,6 +40,7 @@ class Task {
     this.isSelected = false,
     required this.taskPriority,
     this.order = 0,
+    this.importance = 1,
   });
 
   Map<String, dynamic> toMap() {
@@ -53,6 +55,7 @@ class Task {
       'completedAt': completedAt?.toIso8601String(),
       'taskPriority': taskPriority.index,
       'order': order,
+      'importance': importance,
     };
   }
 
@@ -69,6 +72,7 @@ class Task {
       isSelected: map['isSelected'] == 1,
       taskPriority: TaskPriority.values[map['taskPriority'] ?? 1],
       order: map['order'] ?? 0,
+      importance: map['importance'] ?? 1,
     );
   }
 
@@ -84,6 +88,7 @@ class Task {
     bool? isSelected,
     TaskPriority? taskPriority,
     int? order,
+    int? importance,
   }) {
     return Task(
       id: id ?? this.id,
@@ -97,6 +102,7 @@ class Task {
       isSelected: isSelected ?? this.isSelected,
       taskPriority: taskPriority ?? this.taskPriority,
       order: order ?? this.order,
+      importance: importance ?? this.importance,
     );
   }
 } 

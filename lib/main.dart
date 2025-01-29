@@ -106,11 +106,19 @@ class _MyAppState extends State<MyApp> {
             ? CupertinoColors.black 
             : CupertinoColors.systemBackground,
       ),
+      localizationsDelegates: const [
+        DefaultMaterialLocalizations.delegate,
+        DefaultCupertinoLocalizations.delegate,
+        DefaultWidgetsLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('ja', 'JP'),
+      ],
       home: MainScreen(
         isDarkMode: _isDarkMode,
         onDarkModeChanged: _handleDarkModeChanged,
         onUpdateTasks: updateTaskList,
-        tasks: _tasks, // タスクのリストを渡す
+        tasks: _tasks,
       ),
     );
   }
@@ -394,36 +402,35 @@ class _TaskListScreenState extends State<TaskListScreen> {
                 },
               ),
       ),
-      child: SafeArea(
-        child: Stack(
-          children: [
-            ListView.builder(
-              controller: _scrollController,
-              itemCount: _tasks.length,
-              itemBuilder: (context, index) {
-                final task = _tasks[index];
-                return _buildTaskItem(task);
-              },
-            ),
-            Positioned(
-              right: 16,
-              bottom: 24,
-              child: CupertinoButton(
-                color: const Color(0xFFFF2A6D),
-                padding: const EdgeInsets.all(20),
-                borderRadius: BorderRadius.circular(35),
-                onPressed: () async {  // asyncを追加
-                  await _showAddTaskDialog();  // awaitを追加
-                  _loadTasks();  // ダイアログが閉じた後にタスクを再読み込み
-                },
-                child: const Icon(
-                  CupertinoIcons.add,
-                  color: CupertinoColors.white,
-                  size: 30,
-                ),
-              ),
-            ),
-          ],
+      child: Material(  // Materialウィジェットを追加
+        type: MaterialType.transparency,  // 背景を透明に
+        child: SafeArea(
+          child: ReorderableListView.builder(
+            onReorder: (oldIndex, newIndex) {
+              setState(() {
+                if (oldIndex < newIndex) {
+                  newIndex -= 1;
+                }
+                final Task item = _tasks.removeAt(oldIndex);
+                _tasks.insert(newIndex, item);
+                
+                // 並び替え後の順序を更新
+                for (int i = 0; i < _tasks.length; i++) {
+                  _tasks[i] = _tasks[i].copyWith(order: i);
+                  DatabaseHelper.instance.update(_tasks[i]);
+                }
+                DatabaseHelper.instance.notifyTasksUpdated();
+              });
+            },
+            itemCount: _tasks.length,
+            itemBuilder: (context, index) {
+              final task = _tasks[index];
+              return KeyedSubtree(
+                key: Key('${task.id}'),
+                child: _buildTaskItem(task),
+              );
+            },
+          ),
         ),
       ),
     );

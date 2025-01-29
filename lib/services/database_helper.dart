@@ -85,8 +85,11 @@ class DatabaseHelper {
   // 全てのタスクを取得
   Future<List<Task>> getAllTasks() async {
     final db = await database;
-    final result = await db.query('tasks');
-    return result.map((json) => Task.fromMap(json)).toList();
+    final List<Map<String, dynamic>> maps = await db.query(
+      'tasks',
+      orderBy: 'order ASC',  // orderでソート
+    );
+    return List.generate(maps.length, (i) => Task.fromMap(maps[i]));
   }
 
   // タスクを取得する際に順序でソート

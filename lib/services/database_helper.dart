@@ -64,7 +64,12 @@ class DatabaseHelper {
     }
     if (oldVersion < 4) {
       print('Adding taskPriority column...');
-      await db.execute('ALTER TABLE tasks ADD COLUMN taskPriority INTEGER DEFAULT 1');
+      var result = await db.rawQuery("PRAGMA table_info(tasks)");
+      bool columnExists = result.any((column) => column['name'] == 'taskPriority');
+
+      if (!columnExists) {
+        await db.execute("ALTER TABLE tasks ADD COLUMN taskPriority INTEGER DEFAULT 1");
+      }
     }
   }
 

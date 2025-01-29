@@ -42,12 +42,14 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   bool _isDarkMode = false;
+  List<Task> _tasks = []; // 現在のタスク一覧を保持
 
   @override
   void initState() {
     super.initState();
     _loadSettings();
     NotificationService().initialize();
+    updateTaskList(); // アプリ起動時にタスクを読み込む
   }
 
   Future<void> _loadSettings() async {
@@ -60,6 +62,15 @@ class _MyAppState extends State<MyApp> {
   void _handleDarkModeChanged(bool value) {
     setState(() {
       _isDarkMode = value;
+    });
+  }
+
+  Future<void> updateTaskList() async {
+    // データベースからタスクを取得して更新
+    final tasks = await DatabaseHelper.instance.getTodayTasks();
+    print(tasks);
+    setState(() {
+      _tasks = tasks; // タスクのリストを更新
     });
   }
 
@@ -77,7 +88,12 @@ class _MyAppState extends State<MyApp> {
             ? CupertinoColors.black 
             : CupertinoColors.systemBackground,
       ),
-      home: MainScreen(isDarkMode: _isDarkMode, onDarkModeChanged: _handleDarkModeChanged),
+      home: MainScreen(
+        isDarkMode: _isDarkMode,
+        onDarkModeChanged: _handleDarkModeChanged,
+        onUpdateTasks: updateTaskList,
+        tasks: _tasks, // タスクのリストを渡す
+      ),
     );
   }
 }
@@ -85,11 +101,15 @@ class _MyAppState extends State<MyApp> {
 class MainScreen extends StatelessWidget {
   final bool isDarkMode;
   final Function(bool) onDarkModeChanged;
+  final Function() onUpdateTasks;
+  final List<Task> tasks;
 
   const MainScreen({
     super.key,
     required this.isDarkMode,
     required this.onDarkModeChanged,
+    required this.onUpdateTasks,
+    required this.tasks,
   });
 
   @override
@@ -124,12 +144,15 @@ class MainScreen extends StatelessWidget {
             child = TaskListScreen(
               isDarkMode: isDarkMode,
               onDarkModeChanged: onDarkModeChanged,
+              onUpdateTasks: onUpdateTasks,
+              tasks: tasks, // タスクのリストを渡す
             );
             break;
           case 1:
             child = CalendarScreen(
               isDarkMode: isDarkMode,
               onDarkModeChanged: onDarkModeChanged,
+              onTasksUpdated: onUpdateTasks,
             );
             break;
           case 2:
@@ -142,6 +165,8 @@ class MainScreen extends StatelessWidget {
             child = TaskListScreen(
               isDarkMode: isDarkMode,
               onDarkModeChanged: onDarkModeChanged,
+              onUpdateTasks: onUpdateTasks,
+              tasks: tasks, // タスクのリストを渡す
             );
         }
 
@@ -159,11 +184,15 @@ class MainScreen extends StatelessWidget {
 class TaskListScreen extends StatefulWidget {
   final bool isDarkMode;
   final Function(bool) onDarkModeChanged;
+  final Function() onUpdateTasks;
+  final List<Task> tasks;
 
   const TaskListScreen({
     super.key,
     required this.isDarkMode,
     required this.onDarkModeChanged,
+    required this.onUpdateTasks,
+    required this.tasks,
   });
 
   @override
@@ -507,6 +536,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
   }
 
   Widget _buildTaskItem(Task task, {bool isDragging = false}) {
+    _loadTasks();
     return Dismissible(
       key: Key(task.id.toString()),
       direction: DismissDirection.endToStart,

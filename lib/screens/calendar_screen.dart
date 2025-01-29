@@ -10,11 +10,13 @@ import '../screens/settings_screen.dart';
 class CalendarScreen extends StatefulWidget {
   final bool isDarkMode;
   final Function(bool) onDarkModeChanged;
+  final Function()? onTasksUpdated;
 
   const CalendarScreen({
     super.key,
     required this.isDarkMode,
     required this.onDarkModeChanged,
+    this.onTasksUpdated,
   });
 
   @override
@@ -51,8 +53,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
       _loadTasks();
     });
   }
-
-
 
   Future<void> _showAddTaskDialog() async {
     DateTime? tempSelectedTime = _selectedTime;
@@ -419,8 +419,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                             }
                             
                             _loadTasks();
+                            widget.onTasksUpdated?.call();
+                            print(widget.onTasksUpdated);
+                            print("click");
+                            Navigator.pop(context);
                           }
-                          Navigator.pop(context);
                         },
                       ),
                     ),
@@ -433,6 +436,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       ),
     );
   }
+
 
   Future<void> _loadTasks() async {
     _tasks = await DatabaseHelper.instance.getAllTasks();

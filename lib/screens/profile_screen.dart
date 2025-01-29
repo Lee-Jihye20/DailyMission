@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/database_helper.dart';
 import 'package:provider/provider.dart';
 import '../models/user.dart';
-import '../screens/edit_profile_screen.dart';
+import 'edit_profile_screen.dart';
 import 'dart:io';
 
 class ProfileScreen extends StatefulWidget {

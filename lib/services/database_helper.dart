@@ -5,7 +5,7 @@ import 'dart:async';
 
 class DatabaseHelper {
   static final _databaseName = "my_database.db";
-  static final _databaseVersion = 4; // スキーマ変更後のバージョン番号を更新
+  static final _databaseVersion = 5; // バージョンを5に更新
 
   static Database? _database;
 
@@ -42,7 +42,7 @@ class DatabaseHelper {
   Future _onCreate(Database db, int version) async {
     await db.execute('''
       CREATE TABLE tasks (
-        id INTEGER PRIMARY KEY,
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT,
         deadline TEXT,
         priority INTEGER,
@@ -50,7 +50,8 @@ class DatabaseHelper {
         taskColor INTEGER,
         isCompleted INTEGER,
         completedAt TEXT,
-        taskPriority INTEGER
+        taskPriority INTEGER,
+        `order` INTEGER
       )
     ''');
   }
@@ -71,6 +72,26 @@ class DatabaseHelper {
         await db.execute("ALTER TABLE tasks ADD COLUMN taskPriority INTEGER DEFAULT 1");
       }
     }
+    if (oldVersion < 5) {
+      print('Adding order column...');
+      var result = await db.rawQuery("PRAGMA table_info(tasks)");
+      bool columnExists = result.any((column) => column['name'] == 'order');
+
+      if (!columnExists) {
+        await db.execute("ALTER TABLE tasks ADD COLUMN `order` INTEGER DEFAULT 0");
+        
+        // 既存のタスクに順序を設定
+        final tasks = await db.query('tasks', orderBy: 'id ASC');
+        for (int i = 0; i < tasks.length; i++) {
+          await db.update(
+            'tasks',
+            {'order': i},
+            where: 'id = ?',
+            whereArgs: [tasks[i]['id']],
+          );
+        }
+      }
+    }
   }
 
   // 全てのタスクを取得
@@ -79,17 +100,19 @@ class DatabaseHelper {
     final result = await db.query('tasks');
     return result.map((json) => Task.fromMap(json)).toList();
   }
+
+  // タスクを取得する際に順序でソート
   Future<List<Task>> getTodayTasks() async {
     final db = await database;
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final result = await db.query(
+    final List<Map<String, dynamic>> maps = await db.query(
       'tasks',
       where: 'date(deadline) = date(?)',
-      whereArgs: [today.toIso8601String()],
+      whereArgs: [DateTime.now().toIso8601String()],
+      orderBy: '`order` ASC',  // orderで昇順ソート
     );
-    return result.map((json) => Task.fromMap(json)).toList();
+    return List.generate(maps.length, (i) => Task.fromMap(maps[i]));
   }
+
   // 新しいタスクを作成
   Future<Task> create(Task task) async {
     final db = await database;
@@ -198,7 +221,7 @@ class DatabaseHelper {
   Future<void> deleteDatabaseFile() async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, _databaseName);
-    await deleteDatabase(path);
+    await databaseFactory.deleteDatabase(path);  // databaseFactoryを使用
     print('Database deleted: $path');
   }
 
@@ -219,5 +242,32 @@ class DatabaseHelper {
   Future<int> insert(Task task) async {
     final db = await database;
     return await db.insert('tasks', task.toMap());
+  }
+
+  // データベースを再作成するメソッド
+  Future<void> recreateDatabase() async {
+    print('Recreating database...');
+    
+    // 既存のデータベースを閉じる
+    if (_database != null) {
+      await _database!.close();
+      _database = null;
+    }
+    
+    // データベースファイルを削除
+    String path = join(await getDatabasesPath(), _databaseName);
+    print('Deleting database at: $path');
+    await databaseFactory.deleteDatabase(path);  // databaseFactoryを使用
+    
+    // データベースを再作成
+    _database = await _initDatabase();
+    print('Database recreated successfully');
+  }
+
+  // データベースを削除するメソッド
+  Future<void> deleteDatabase() async {
+    final dbPath = await getDatabasesPath();
+    final path = join(dbPath, _databaseName);
+    await databaseFactory.deleteDatabase(path);  // databaseFactoryを使用
   }
 } 

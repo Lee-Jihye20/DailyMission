@@ -25,6 +25,7 @@ class Task {
   DateTime? completedAt;
   bool isSelected = false;
   final TaskPriority taskPriority;
+  int order;
 
   Task({
     this.id,
@@ -37,6 +38,7 @@ class Task {
     this.completedAt,
     this.isSelected = false,
     required this.taskPriority,
+    this.order = 0,
   });
 
   Map<String, dynamic> toMap() {
@@ -49,6 +51,8 @@ class Task {
       'taskColor': taskColor.value,
       'isCompleted': isCompleted ? 1 : 0,
       'completedAt': completedAt?.toIso8601String(),
+      'taskPriority': taskPriority.index,
+      'order': order,
     };
   }
 
@@ -64,6 +68,7 @@ class Task {
       completedAt: map['completedAt'] != null ? DateTime.parse(map['completedAt']) : null,
       isSelected: map['isSelected'] == 1,
       taskPriority: TaskPriority.values[map['taskPriority'] ?? 1],
+      order: map['order'] ?? 0,
     );
   }
 
@@ -78,6 +83,7 @@ class Task {
     DateTime? completedAt,
     bool? isSelected,
     TaskPriority? taskPriority,
+    int? order,
   }) {
     return Task(
       id: id ?? this.id,
@@ -90,6 +96,7 @@ class Task {
       completedAt: completedAt ?? this.completedAt,
       isSelected: isSelected ?? this.isSelected,
       taskPriority: taskPriority ?? this.taskPriority,
+      order: order ?? this.order,
     );
   }
 } 

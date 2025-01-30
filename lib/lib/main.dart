@@ -888,15 +888,15 @@ class _TaskListScreenState extends State<TaskListScreen> {
       DateTime.now().year,
       DateTime.now().month,
       DateTime.now().day,
-      12,  // 時を12に設定
-      0,   // 分を0に設定
+      12,
+      0,
     );
     Color? tempSelectedColor = _selectedColor;
-    _selectedTime = tempSelectedTime;  // 初期値を設定
+    _selectedTime = tempSelectedTime;
     _selectedColor = null;
     _textController.clear();
-
-    int selectedImportance = 1;  // デフォルト値
+    String selectedCategory = '未分類';
+    int selectedImportance = 1;
 
     showCupertinoModalPopup(
       context: context,
@@ -1302,8 +1302,8 @@ class _TaskListScreenState extends State<TaskListScreen> {
                               );
                             }
                             
-                            await _loadTasks();  // タスクリストを更新
-                            DatabaseHelper.instance.notifyTasksUpdated();  // 他の画面に通知
+                            await _loadTasks();
+                            DatabaseHelper.instance.notifyTasksUpdated();
                             Navigator.pop(context);
                           }
                         },

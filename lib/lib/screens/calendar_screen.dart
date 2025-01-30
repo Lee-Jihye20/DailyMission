@@ -169,20 +169,56 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     showCupertinoModalPopup(
                       context: context,
                       builder: (context) => Container(
-                        height: 200,
+                        height: 250,  // 高さを増やしてボタンを収める
                         color: widget.isDarkMode 
                             ? CupertinoColors.black 
                             : CupertinoColors.systemBackground,
-                        child: CupertinoPicker(
-                          itemExtent: 32,
-                          onSelectedItemChanged: (index) {
-                            setModalState(() {
-                              selectedCategory = predefinedCategories[index];
-                            });
-                          },
-                          children: predefinedCategories
-                              .map((category) => Text(category))
-                              .toList(),
+                        child: Column(
+                          children: [
+                            Container(
+                              height: 44,
+                              decoration: BoxDecoration(
+                                border: Border(
+                                  bottom: BorderSide(
+                                    color: widget.isDarkMode 
+                                        ? CupertinoColors.darkBackgroundGray 
+                                        : CupertinoColors.systemGrey5,
+                                    width: 1,
+                                  ),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  CupertinoButton(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                                    child: const Text('キャンセル'),
+                                    onPressed: () => Navigator.pop(context),
+                                  ),
+                                  CupertinoButton(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                                    child: const Text('完了'),
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Expanded(
+                              child: CupertinoPicker(
+                                itemExtent: 32,
+                                onSelectedItemChanged: (index) {
+                                  setModalState(() {
+                                    selectedCategory = predefinedCategories[index];
+                                  });
+                                },
+                                children: predefinedCategories
+                                    .map((category) => Text(category))
+                                    .toList(),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     );
@@ -407,7 +443,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         ),
                         onPressed: () async {
                           if (_textController.text.isNotEmpty) {
-                            final deadline = tempSelectedTime != null
+                            // 選択された日付と時刻を組み合わせる
+                            final taskDateTime = tempSelectedTime != null
                                 ? DateTime(
                                     _selectedDay!.year,
                                     _selectedDay!.month,
@@ -415,31 +452,44 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                     tempSelectedTime!.hour,
                                     tempSelectedTime!.minute,
                                   )
-                                : null;
-                            
+                                : _selectedDay;  // 時刻が選択されていない場合は日付のみ
+
                             final task = Task(
                               title: _textController.text,
-                              deadline: deadline,
+                              deadline: taskDateTime,
                               priority: Priority.medium,
                               category: selectedCategory,
                               taskColor: tempSelectedColor ?? const Color(0xFFFFC107),
                               taskPriority: TaskPriority.medium,
-                              importance: selectedImportance,  // 重要度を追加
+                              importance: selectedImportance,
                             );
+                            
                             final savedTask = await DatabaseHelper.instance.create(task);
                             
-                            if (deadline != null) {
+                            if (taskDateTime != null) {
                               await NotificationService().scheduleTaskNotification(
                                 savedTask.id!,
                                 savedTask.title,
-                                deadline,
+                                taskDateTime,
                               );
+
+                              // タスクを即時反映（taskDateTimeがnullでない場合のみ）
+                              final date = DateTime(
+                                taskDateTime.year,
+                                taskDateTime.month,
+                                taskDateTime.day,
+                              );
+                              
+                              if (_tasksByDay[date] == null) {
+                                _tasksByDay[date] = [];
+                              }
+                              _tasksByDay[date]!.add(savedTask);
                             }
                             
-                            _loadTasks();
-                            widget.onTasksUpdated?.call();
-                            print(widget.onTasksUpdated);
-                            print("click");
+                            await _loadTasks();  // 全体のタスクリストを更新
+                            DatabaseHelper.instance.notifyTasksUpdated();  // メイン画面に通知
+                            setState(() {});  // UIを即時更新
+                            
                             Navigator.pop(context);
                           }
                         },
@@ -458,7 +508,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Future<void> _loadTasks() async {
     _tasks = await DatabaseHelper.instance.getAllTasks();
-    _tasksByDay = {};
+    _tasksByDay.clear();  // 既存のタスクをクリア
     
     for (var task in _tasks) {
       if (task.deadline != null) {
@@ -472,29 +522,20 @@ class _CalendarScreenState extends State<CalendarScreen> {
           _tasksByDay[date] = [];
         }
         _tasksByDay[date]!.add(task);
-        
-        // 各日付のタスクリストを完了状態と時間でソート
-        _tasksByDay[date]!.sort((a, b) {
-          // まず完了状態でソート（未完了が上）
-          if (a.isCompleted != b.isCompleted) {
-            return a.isCompleted ? 1 : -1;
-          }
-          
-          // 両方ともdeadlineがない場合は順序を維持
-          if (a.deadline == null && b.deadline == null) return 0;
-          // deadlineがない場合は後ろに
-          if (a.deadline == null) return 1;
-          if (b.deadline == null) return -1;
-          
-          // 時間を分単位に変換して比較
-          final timeA = a.deadline!.hour * 60 + a.deadline!.minute;
-          final timeB = b.deadline!.hour * 60 + b.deadline!.minute;
-          return timeA.compareTo(timeB);
-        });
       }
     }
     
-    setState(() {});
+    // 選択された日付のタスクを再ロード
+    if (_selectedDay != null) {
+      final selectedDate = DateTime(
+        _selectedDay!.year,
+        _selectedDay!.month,
+        _selectedDay!.day,
+      );
+      _tasksByDay[selectedDate] = _tasksByDay[selectedDate] ?? [];
+    }
+    
+    setState(() {});  // UIを更新
   }
 
   List<Task> _getTasksForDay(DateTime day) {

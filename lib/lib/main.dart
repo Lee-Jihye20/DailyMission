@@ -287,18 +287,11 @@ class _TaskListScreenState extends State<TaskListScreen> {
           return a.isCompleted ? 1 : -1;
         }
         
-        // 両方ともdeadlineがない場合は順序を維持
-        if (a.deadline == null && b.deadline == null) return 0;
-        // deadlineがない場合は後ろに
-        if (a.deadline == null) return 1;
-        if (b.deadline == null) return -1;
-        
-        // 時間を分単位に変換して比較
-        final timeA = a.deadline!.hour * 60 + a.deadline!.minute;
-        final timeB = b.deadline!.hour * 60 + b.deadline!.minute;
-        return timeA.compareTo(timeB);
+        // orderでソート
+        return a.order.compareTo(b.order);
       });
     });
+    widget.onUpdateTasks();  // 親ウィジェットに通知
   }
 
   Future<void> _handleTaskCompletion(Task task, bool isCompleted) async {
@@ -403,35 +396,69 @@ class _TaskListScreenState extends State<TaskListScreen> {
                 },
               ),
       ),
-      child: Material(  // Materialウィジェットを追加
-        type: MaterialType.transparency,  // 背景を透明に
-        child: SafeArea(
-          child: ReorderableListView.builder(
-            onReorder: (oldIndex, newIndex) {
-              setState(() {
-                if (oldIndex < newIndex) {
-                  newIndex -= 1;
-                }
-                final Task item = _tasks.removeAt(oldIndex);
-                _tasks.insert(newIndex, item);
-                
-                // 並び替え後の順序を更新
-                for (int i = 0; i < _tasks.length; i++) {
-                  _tasks[i] = _tasks[i].copyWith(order: i);
-                  DatabaseHelper.instance.update(_tasks[i]);
-                }
-                DatabaseHelper.instance.notifyTasksUpdated();
-              });
-            },
-            itemCount: _tasks.length,
-            itemBuilder: (context, index) {
-              final task = _tasks[index];
-              return KeyedSubtree(
-                key: Key('${task.id}'),
-                child: _buildTaskItem(task),
-              );
-            },
-          ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: Stack(
+          children: [
+            SafeArea(
+              child: ReorderableListView.builder(
+                onReorder: (oldIndex, newIndex) {
+                  setState(() {
+                    if (oldIndex < newIndex) {
+                      newIndex -= 1;
+                    }
+                    final Task item = _tasks.removeAt(oldIndex);
+                    _tasks.insert(newIndex, item);
+                    
+                    // 並び替え後の順序を更新
+                    for (int i = 0; i < _tasks.length; i++) {
+                      _tasks[i] = _tasks[i].copyWith(order: i);
+                      DatabaseHelper.instance.update(_tasks[i]);
+                    }
+                    DatabaseHelper.instance.notifyTasksUpdated();
+                  });
+                },
+                itemCount: _tasks.length,
+                itemBuilder: (context, index) {
+                  final task = _tasks[index];
+                  return KeyedSubtree(
+                    key: Key('${task.id}'),
+                    child: _buildTaskItem(task),
+                  );
+                },
+              ),
+            ),
+            Positioned(
+              right: 24,  // 右端からの距離を増やす
+              bottom: 32,  // 下端からの距離を増やす
+              child: GestureDetector(
+                onTap: () async {
+                  await _showAddTaskDialog();
+                  await _loadTasks();
+                },
+                child: Container(
+                  width: 64,  // サイズを大きく
+                  height: 64,  // サイズを大きく
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFFFF2A6D),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFFF2A6D).withOpacity(0.3),
+                        blurRadius: 12,  // シャドウを少し大きく
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    CupertinoIcons.add,
+                    color: CupertinoColors.white,
+                    size: 36,  // アイコンも大きく
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -1255,39 +1282,30 @@ class _TaskListScreenState extends State<TaskListScreen> {
                         ),
                         onPressed: () async {
                           if (_textController.text.isNotEmpty) {
-                            final now = DateTime.now();
-                            final deadline = tempSelectedTime != null
-                                ? DateTime(
-                                    now.year,
-                                    now.month,
-                                    now.day,
-                                    tempSelectedTime!.hour,
-                                    tempSelectedTime!.minute,
-                                  )
-                                : null;
-                            
                             final task = Task(
                               title: _textController.text,
-                              deadline: deadline,
+                              deadline: tempSelectedTime,
                               priority: Priority.medium,
                               category: selectedCategory,
                               taskColor: tempSelectedColor ?? const Color(0xFFFFC107),
                               taskPriority: TaskPriority.medium,
                               importance: selectedImportance,
                             );
+                            
                             final savedTask = await DatabaseHelper.instance.create(task);
                             
-                            if (deadline != null) {
+                            if (tempSelectedTime != null) {
                               await NotificationService().scheduleTaskNotification(
                                 savedTask.id!,
                                 savedTask.title,
-                                deadline,
+                                tempSelectedTime!,
                               );
                             }
                             
-                            _loadTasks();
+                            await _loadTasks();  // タスクリストを更新
+                            DatabaseHelper.instance.notifyTasksUpdated();  // 他の画面に通知
+                            Navigator.pop(context);
                           }
-                          Navigator.pop(context);
                         },
                       ),
                     ),

@@ -87,7 +87,7 @@ class DatabaseHelper {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
       'tasks',
-      orderBy: 'order ASC',  // orderでソート
+      orderBy: '`order` ASC',  // orderをバッククォートで囲む
     );
     return List.generate(maps.length, (i) => Task.fromMap(maps[i]));
   }
@@ -107,9 +107,22 @@ class DatabaseHelper {
   // 新しいタスクを作成
   Future<Task> create(Task task) async {
     final db = await database;
-    task.deadline = task.deadline ?? DateTime.now(); // デフォルトで現在の日付を設定
-    final id = await db.insert('tasks', task.toMap());
-    return task.copyWith(id: id);
+    
+    // 最大の order 値を取得
+    final List<Map<String, dynamic>> result = await db.rawQuery(
+      'SELECT MAX(`order`) as maxOrder FROM tasks'
+    );
+    final int maxOrder = Sqflite.firstIntValue(result) ?? -1;
+    
+    // 新しいタスクの order を設定
+    final taskMap = task.toMap();
+    taskMap['order'] = maxOrder + 1;
+    
+    final id = await db.insert('tasks', taskMap);
+    return task.copyWith(
+      id: id,
+      order: maxOrder + 1,
+    );
   }
 
   // タスクを更新
